@@ -26,4 +26,5 @@ const onSetSnapshot = async (data, socket, io) => {
   const { img, recipient } = data;
   io.to(recipient).emit(SET_SNAPSHOT, img);
 }
+
 module.exports = { onDraw, onFinishDraw, onConnectionDraw, onGetSnapshot, onSetSnapshot };
