@@ -17,11 +17,9 @@ const onGetSnapshot = async (data, socket, io) => {
   const { roomId, socketId, userId } = data;
   const currentRoom = await room.findById(roomId);
 
-  if (currentRoom.owner === userId) {
-    return true;
+  if (currentRoom.owner !== userId) {
+    io.in(roomId).emit(SEND_SNAPSHOT, currentRoom.owner, socket.id);
   }
-
-  io.in(roomId).emit(SEND_SNAPSHOT, currentRoom.owner, socket.id);
 }
 
 const onSetSnapshot = async (data, socket, io) => {
