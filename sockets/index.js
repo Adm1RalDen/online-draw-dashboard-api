@@ -1,14 +1,14 @@
 const { onGetRooms, onCreateRoom, onJoin, onExit, onJoinAccess } = require("./room.socket");
 const { onGetChat, onMessage } = require("./chat.socket");
 const { onGetUserRooms, onDeleteUserRoom, onUpdateUserRoom, onGetRooom } = require("./userRoom.socket");
-const { onDraw, onFinishDraw, onConnectionDraw } = require("./draw.socket");
+const { onDraw, onFinishDraw, onConnectionDraw, onGetSnapshot, onSetSnapshot } = require("./draw.socket");
 const {
   CONNECTION,
   DISCONNECT,
   CHAT: { CHAT_MESSAGE, GET_CHAT },
   ROOM: { CREATE_ROOM, EXIT, GET_ROOMS, JOIN_ROOM, JOIN_ACCESS },
   USER_ROOM: { DELETE_USER_ROOM, GET_ROOM, GET_USER_ROOMS, UPDATE_USER_ROOM },
-  DRAW: { CONNECTION_DRAW, FINISH_DRAW, START_DRAW }
+  DRAW: { CONNECTION_DRAW, FINISH_DRAW, START_DRAW, SEND_SNAPSHOT, GET_SNAPSHOT }
 } = require("../const/sockets");
 
 const setSockets = (socket, io) => {
@@ -24,7 +24,7 @@ const setSockets = (socket, io) => {
   socket.on(GET_ROOMS, (data) => onGetRooms(socket, data))
   socket.on(CREATE_ROOM, (data) => onCreateRoom(socket, data, io))
   socket.on(JOIN_ROOM, (data) => onJoin(socket, data, io))
- 
+
   socket.on(JOIN_ACCESS, (data) => onJoinAccess(socket, data, io))
   socket.on(EXIT, (data) => onExit(socket, data, io))
 
@@ -36,6 +36,8 @@ const setSockets = (socket, io) => {
   socket.on(START_DRAW, (data) => onDraw(data, socket, io))
   socket.on(CONNECTION_DRAW, (data) => onConnectionDraw(data, socket, io))
   socket.on(FINISH_DRAW, (data) => onFinishDraw(data, socket, io))
+  socket.on(GET_SNAPSHOT, (data) => onGetSnapshot(data, socket, io))
+  socket.on(SEND_SNAPSHOT, (data) => onSetSnapshot(data, socket, io))
 };
 
 module.exports = { setSockets };
