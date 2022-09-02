@@ -1,7 +1,7 @@
 const Room = require("../models/room");
 const user = require("../models/user");
 const {
-  USER_ROOM: { GET_ROOM, GET_USER_ROOMS, ERROR_GET_USER_ROOMS, ERROR_DELETE_USER_ROOM, ERROR_UPDATE_USER_ROOM },
+  USER_ROOM: { GET_ROOM, GET_USER_ROOMS, ERROR_GET_USER_ROOMS, DELETE_USER_ROOM_ERROR, UPDATE_USER_ROOM_ERROR, DELETE_USER_ROOM_SUCCESS, UPDATE_USER_ROOM_SUCCESS },
   ROOM: { GET_ROOMS }
 } = require("../const/sockets");
 
@@ -54,13 +54,14 @@ const onDeleteUserRoom = async (data, socket, io) => {
     io.emit(GET_ROOMS, rooms.map(({ roomPassword, ...data }) => data)
       .filter((data) => data.status === true && data.isShow === true)
     );
+    socket.emit(DELETE_USER_ROOM_SUCCESS);
     socket.emit(GET_USER_ROOMS, rooms.filter((data) => data.owner === userId));
 
   } catch (e) {
     if (typeof e === "string") {
-      socket.emit(ERROR_DELETE_USER_ROOM, e);
+      socket.emit(DELETE_USER_ROOM_ERROR, e);
     } else {
-      socket.emit(ERROR_DELETE_USER_ROOM, e?.message || "Occured error");
+      socket.emit(DELETE_USER_ROOM_ERROR, e?.message || "Occured error");
     }
   }
 };
@@ -92,12 +93,13 @@ const onUpdateUserRoom = async (data, socket, io) => {
       .filter((data) => data.status === true && data.isShow === true)
     );
 
+    socket.emit(UPDATE_USER_ROOM_SUCCESS);
     socket.emit(GET_USER_ROOMS, rooms.filter((data) => data.owner === userId));
   } catch (e) {
     if (typeof e === "string") {
-      socket.emit(ERROR_UPDATE_USER_ROOM, e);
+      socket.emit(UPDATE_USER_ROOM_ERROR, e);
     } else {
-      socket.emit(ERROR_UPDATE_USER_ROOM, e?.message || "Occured error");
+      socket.emit(UPDATE_USER_ROOM_ERROR, e?.message || "Occured error");
     }
   }
 };

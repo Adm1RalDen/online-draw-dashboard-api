@@ -1,7 +1,7 @@
 const { CreateRoomDB } = require("../db/rooms.operations");
 const Room = require("../models/room");
 const {
-  ROOM: { GET_ROOMS, CREATE_ERROR, CREATE_SUCCESS, JOIN_ERROR, JOIN_SUCCESS },
+  ROOM: { GET_ROOMS, CREATE_ERROR, CREATE_SUCCESS, JOIN_ROOM_ERROR, JOIN_ROOM_SUCCESS },
   USER_ROOM: { GET_ROOM },
   DRAW: { CASE_EXIT }
 } = require("../const/sockets");
@@ -82,12 +82,12 @@ const onJoin = async (socket, data, io) => {
     }
 
     socket.join(roomId);
-    socket.emit(JOIN_SUCCESS, roomId);
+    socket.emit(JOIN_ROOM_SUCCESS, roomId);
   } catch (e) {
     if (typeof e === "string") {
-      socket.emit(JOIN_ERROR, e);
+      socket.emit(JOIN_ROOM_ERROR, e);
     } else {
-      socket.emit(JOIN_ERROR, e?.message || "Error");
+      socket.emit(JOIN_ROOM_ERROR, e?.message || "Error");
     }
   }
 };

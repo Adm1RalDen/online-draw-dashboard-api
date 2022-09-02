@@ -6,7 +6,7 @@ const {
   CONNECTION,
   DISCONNECT,
   CHAT: { CHAT_MESSAGE, GET_CHAT },
-  ROOM: { CREATE_ROOM, EXIT, GET_ROOMS, JOIN, JOIN_ACCESS },
+  ROOM: { CREATE_ROOM, EXIT, GET_ROOMS, JOIN_ROOM, JOIN_ACCESS },
   USER_ROOM: { DELETE_USER_ROOM, GET_ROOM, GET_USER_ROOMS, UPDATE_USER_ROOM },
   DRAW: { CONNECTION_DRAW, FINISH_DRAW, START_DRAW }
 } = require("../const/sockets");
@@ -23,7 +23,8 @@ const setSockets = (socket, io) => {
 
   socket.on(GET_ROOMS, (data) => onGetRooms(socket, data))
   socket.on(CREATE_ROOM, (data) => onCreateRoom(socket, data, io))
-  socket.on(JOIN, (data) => onJoin(socket, data, io))
+  socket.on(JOIN_ROOM, (data) => onJoin(socket, data, io))
+ 
   socket.on(JOIN_ACCESS, (data) => onJoinAccess(socket, data, io))
   socket.on(EXIT, (data) => onExit(socket, data, io))
 
