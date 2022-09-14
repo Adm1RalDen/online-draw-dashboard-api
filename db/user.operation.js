@@ -67,8 +67,8 @@ const Logout = async (refreshToken) => {
 };
 
 const Update = async ({ id, email, password, ...data }, { avatar, backgroundFon }) => {
-  const avatarPath = `${HOST}/users/${id}/${id}_avatar.png`;
-  const backgroundPath = `${HOST}/users/${id}/${id}_background.jpg`;
+  const avatarPath = `users/${id}/${id}_avatar.png`;
+  const backgroundPath = `users/${id}/${id}_background.jpg`;
 
   let resultObject = {};
 

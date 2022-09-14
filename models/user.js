@@ -15,11 +15,11 @@ const userSchema = new Schema({
   rooms: { type: [String], default: [] },
   avatar: {
     type: String,
-    default: "http://localhost:5000/users/defaultUserImage.png",
+    default: "/users/defaultUserImage.png",
   },
   backgroundFon: {
     type: String,
-    default: "http://localhost:5000/users/defaultUserFon.jpg",
+    default: "/users/defaultUserFon.jpg",
   },
   isActivated: { type: Boolean, default: false },
   activationLink: { type: String }
