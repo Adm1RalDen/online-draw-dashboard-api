@@ -56,12 +56,8 @@ const login = async (req, res, next) => {
     const token = tokenService.generateToken(user._id, user.email, user.role);
     await tokenService.saveToken(user.id, token.refresh);
 
-    res.cookie("refreshToken", token.refresh, {
-      maxAge: 3600 * 24 * 1000 * 31,
-      httpOnly: true,
-    });
-
     const result = {
+      refreshToken: token.refresh,
       token: token.access,
       user: {
         name: user.name,
@@ -78,7 +74,7 @@ const login = async (req, res, next) => {
 
 const logout = async (req, res, next) => {
   try {
-    const { refreshToken } = req.cookies;
+    const { refreshToken } = req.body;
 
     if (!refreshToken) {
       return res.status(200).json({ message: "Logout success" });
@@ -94,7 +90,7 @@ const logout = async (req, res, next) => {
 
 const handleRefresh = async (req, res, next) => {
   try {
-    const refreshToken = req.cookies.refreshToken;
+    const { refreshToken } = req.body;
     if (!refreshToken) {
       return next(ApiError.notAuthorized("User is not authorized"));
     }
@@ -105,11 +101,6 @@ const handleRefresh = async (req, res, next) => {
       token: userData.token,
       user: userData.user,
     };
-
-    res.cookie("refreshToken", userData.refresh, {
-      maxAge: 3600 * 24 * 1000 * 31,
-      httpOnly: true,
-    });
 
     return res.json(result);
   } catch (e) {

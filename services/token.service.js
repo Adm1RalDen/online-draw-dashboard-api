@@ -5,7 +5,7 @@ const Token = require("../models/token");
 
 const generateToken = (id, email, role) => {
   const access = jwt.sign({ id, email, role }, SECRETKEY, {
-    expiresIn: "1m",
+    expiresIn: "1d",
   });
   const refresh = jwt.sign({ id, email, role }, JWT_REFRESH_SECRET, {
     expiresIn: "30d",

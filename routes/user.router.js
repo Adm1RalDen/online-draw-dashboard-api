@@ -8,7 +8,7 @@ router.post(REGISTRATION_URL, UserController.registration);
 router.post(LOGIN_URL, UserController.login);
 router.delete(LOGOUT_URL, UserController.logout);
 router.get(ACTIVATION_LINK_URL, UserController.activate);
-router.get(REFRESH_URL, UserController.handleRefresh);
+router.post(REFRESH_URL, UserController.handleRefresh);
 router.get(GET_USER_URL, authMiddleware, UserController.getUser);
 router.put(UPDATE_URL, authMiddleware, UserController.updateUserData);
 module.exports = router;
