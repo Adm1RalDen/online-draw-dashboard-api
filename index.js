@@ -12,8 +12,10 @@ const { Server } = require("socket.io");
 const { PORT, STATIC_FOLDER } = require("./const/settings");
 const { API } = require("./const/endpoints");
 const { CONNECTION } = require("./const/sockets");
+const { setCookie } = require("./utils/cookie");
 
 const app = express();
+app.use("*", setCookie);
 app.use(cookieParser());
 app.use(SetCors());
 app.use(express.static(STATIC_FOLDER));
