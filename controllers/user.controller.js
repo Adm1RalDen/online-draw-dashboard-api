@@ -59,7 +59,6 @@ const login = async (req, res, next) => {
     res.cookie("refreshToken", token.refresh, {
       maxAge: 3600 * 24 * 1000 * 31,
       httpOnly: true,
-      sameSite: 'none'
     });
 
     const result = {
@@ -110,7 +109,6 @@ const handleRefresh = async (req, res, next) => {
     res.cookie("refreshToken", userData.refresh, {
       maxAge: 3600 * 24 * 1000 * 31,
       httpOnly: true,
-      sameSite: 'none'
     });
 
     return res.json(result);
