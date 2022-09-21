@@ -1,10 +1,17 @@
 const { CreateRoomDB } = require("../db/rooms.operations");
 const Room = require("../models/room");
 const {
-  ROOM: { GET_ROOMS, CREATE_ERROR, CREATE_SUCCESS, JOIN_ROOM_ERROR, JOIN_ROOM_SUCCESS },
+  ROOM: {
+    GET_ROOMS,
+    CREATE_ERROR,
+    CREATE_SUCCESS,
+    JOIN_ROOM_ERROR,
+    JOIN_ROOM_SUCCESS,
+  },
   USER_ROOM: { GET_ROOM },
-  DRAW: { CASE_EXIT }
+  DRAW: { CASE_EXIT },
 } = require("../const/sockets");
+const User = require("../models/user");
 
 const getRooms = async () => {
   return Room.find()
@@ -26,11 +33,19 @@ const onGetRooms = async (socket) => {
 
 const onCreateRoom = async (socket, data, io) => {
   try {
-    const room = await CreateRoomDB(data);
-    const rooms = await getRooms();
-    socket.join(room.id);
-    io.emit(GET_ROOMS, [...rooms]);
-    socket.emit(CREATE_SUCCESS, room.id);
+    const user = await User.findById(data.userId);
+
+    if (!user.isUserInRoom) {
+      const room = await CreateRoomDB(data);
+      const rooms = await getRooms();
+      user.isUserInRoom = true;
+      user.save();
+      socket.join(room.id);
+      io.emit(GET_ROOMS, [...rooms]);
+      socket.emit(CREATE_SUCCESS, room.id);
+    } else {
+      throw "You are already in room (For create room you should left prev room)";
+    }
   } catch (e) {
     if (typeof e === "string") {
       socket.emit(CREATE_ERROR, e);
@@ -43,6 +58,7 @@ const onCreateRoom = async (socket, data, io) => {
 const onJoin = async (socket, data, io) => {
   try {
     const { roomId, roomPassword, userId, userName } = data;
+    const user = await User.findById(userId);
     let room;
 
     try {
@@ -52,6 +68,10 @@ const onJoin = async (socket, data, io) => {
       }
     } catch {
       throw "Not found room";
+    }
+
+    if (user.isUserInRoom) {
+      throw "You are already in other room (For enter you should left prev room)";
     }
 
     if (room.roomPassword !== roomPassword) {
@@ -81,6 +101,8 @@ const onJoin = async (socket, data, io) => {
       io.to(roomId).emit(GET_ROOM, roomInfo);
     }
 
+    user.isUserInRoom = true;
+    await user.save();
     socket.join(roomId);
     socket.emit(JOIN_ROOM_SUCCESS, roomId);
   } catch (e) {
@@ -100,6 +122,7 @@ const onJoinAccess = async (socket, data) => {
 const onExit = async (socket, data, io) => {
   try {
     const { roomId, userId } = data;
+    const user = await User.findById(userId);
     const currentRoom = await Room.findById(roomId).select(
       "-roomPassword -__v"
     );
@@ -123,6 +146,8 @@ const onExit = async (socket, data, io) => {
     }
 
     const rooms = await getRooms();
+    user.isUserInRoom = false;
+    await user.save();
     io.emit(GET_ROOMS, rooms);
   } catch (e) {
 

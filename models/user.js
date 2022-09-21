@@ -13,6 +13,7 @@ const userSchema = new Schema({
   biography: { type: String, default: "" },
   limitRooms: { type: Number, default: 5 },
   rooms: { type: [String], default: [] },
+  isUserInRoom: { type: Boolean, default: false },
   avatar: {
     type: String,
     default: "/users/defaultUserImage.png",

@@ -1,9 +1,18 @@
 const Room = require("../models/room");
-const user = require("../models/user");
+const User = require("../models/user");
 const {
-  USER_ROOM: { GET_ROOM, GET_USER_ROOMS, ERROR_GET_USER_ROOMS, DELETE_USER_ROOM_ERROR, UPDATE_USER_ROOM_ERROR, DELETE_USER_ROOM_SUCCESS, UPDATE_USER_ROOM_SUCCESS },
-  ROOM: { GET_ROOMS }
+  USER_ROOM: {
+    GET_ROOM,
+    GET_USER_ROOMS,
+    ERROR_GET_USER_ROOMS,
+    DELETE_USER_ROOM_ERROR,
+    UPDATE_USER_ROOM_ERROR,
+    DELETE_USER_ROOM_SUCCESS,
+    UPDATE_USER_ROOM_SUCCESS,
+  },
+  ROOM: { GET_ROOMS },
 } = require("../const/sockets");
+const user = require("../models/user");
 
 const onGetUserRooms = async ({ userId = "" }, socket) => {
   try {
@@ -46,6 +55,9 @@ const onDeleteUserRoom = async (data, socket, io) => {
     }
 
     currentUser.rooms = currentUser.rooms.filter((room) => room !== roomId);
+    if (room.users.find((u) => u.userId === userId)) {
+      currentUser.isUserInRoom = false;
+    }
     await currentUser.save();
     await room.delete();
 
