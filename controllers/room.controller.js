@@ -31,12 +31,8 @@ const getAllRooms = async (req, res, next) => {
 
 const checkIdRoom = async (req, res, next) => {
   try {
-    try {
-      const existRoom = await CheckIdRoomDB(req.params.id, req.body.userId)
-      return res.status(200).json(existRoom);
-    } catch (e) {
-      throw new ApiError.badRequest("Not found room")
-    }
+    const existRoom = await CheckIdRoomDB(req.params.id, req.body.userId)
+    return res.status(200).json(existRoom);
   } catch (e) {
     next(e);
   }

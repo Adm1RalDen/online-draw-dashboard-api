@@ -1,6 +1,6 @@
 const ApiError = require("../error/errorClass");
 const room = require("../models/room");
-const user = require("../models/user");
+const User = require("../models/user");
 
 const CreateRoomDB = async (data) => {
   const { userId, userName, roomName, roomPassword = "" } = data;
@@ -8,7 +8,7 @@ const CreateRoomDB = async (data) => {
     throw ApiError.badRequest("Invalid data in request");
   }
 
-  const currentUser = await user.findById(userId);
+  const currentUser = await User.findById(userId);
   if (!currentUser) {
     throw ApiError.badRequest("Invalid data in request");
   }
@@ -66,11 +66,18 @@ const EnterInRoomDB = async (data) => {
 };
 
 const CheckIdRoomDB = async (roomId, userId) => {
-  const existRoom = await room.findById(roomId).select("-__v -roomPassword");
-  if (!existRoom) throw ApiError.notFound("Not found room");
-  const userInRoom = existRoom.users.find((e) => e.userId === userId);
-  if (!userInRoom) throw ApiError.forbidden("Not access");
-  return existRoom;
+  const isExistRoom = await room.findById(roomId).select("-__v -roomPassword");
+  const user = await User.findById(userId);
+  if (user.isUserInRoom) {
+    throw ApiError.conflict(
+      "You have already been in room (For join to room you should left prev room)"
+    );
+  }
+  if (!isExistRoom) throw ApiError.notFound("Not found room");
+
+  const userInRoom = isExistRoom.users.find((e) => e.userId === userId);
+  if (!userInRoom) throw ApiError.forbidden("Please confirm room password");
+  return isExistRoom;
 };
 
 const CheckRoomPasswordDB = async (id, data) => {
