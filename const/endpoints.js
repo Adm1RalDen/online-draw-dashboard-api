@@ -8,6 +8,7 @@ const ALL_ROOMS_URL = "/all";
 const CHECK_ROOM_URL = "/check/:id";
 const LEAVE_URL = "/leave";
 const CHECK_PASSWORD_URL = "/checkRoomPassword/:id";
+const CHECK_ACTIVATE_LINK = "/check-activate-link/:link";
 
 const REGISTRATION_URL = "/registration";
 const LOGIN_URL = "/login";
@@ -25,7 +26,8 @@ const USER_ENDPOINTS = {
   ACTIVATION_LINK_URL,
   GET_USER_URL,
   REFRESH_URL,
-  UPDATE_URL
+  UPDATE_URL,
+  CHECK_ACTIVATE_LINK
 }
 
 const ROOM_ENDPOINTS = {

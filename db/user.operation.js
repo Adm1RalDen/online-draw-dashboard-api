@@ -6,8 +6,9 @@ const Token = require("../models/token");
 const path = require("path");
 const fs = require("fs");
 const ApiError = require("../error/errorClass");
-const { HOST } = require("../const/settings");
-const GET_USER_SELECT = "name age email id city country color gender date biography role avatar backgroundFon";
+const { ORIGIN } = require("../const/settings");
+const GET_USER_SELECT =
+  "name age email id city country color gender date biography role avatar backgroundFon";
 
 const CheckUser = async (email) => {
   const candidate = await User.findOne({ email });
@@ -25,16 +26,19 @@ const RegisterUser = async (data) => {
   const hash_password = Crypto.SHA256(password).toString();
   const activationLink = nanoid();
 
-  const user = await createUser({ email, password: hash_password, name, activationLink });
+  // const user = await createUser({ email, password: hash_password, name, activationLink });
 
-  fs.mkdir(path.resolve(__dirname, "..", "static", "users", user.id), (err) => {
-    if (err) {
-      throw err;
-    }
-  });
+  // fs.mkdir(path.resolve(__dirname, "..", "static", "users", user.id), (err) => {
+  //   if (err) {
+  //     throw err;
+  //   }
+  // });
 
-  await mailService.sendActivationMail(email, `${HOST}/api/user/activate/${activationLink}`);
-  return user;
+  await mailService.sendActivationMail(
+    email,
+    `${ORIGIN}/activate/${activationLink}`
+  );
+  // return user;
 };
 
 const LoginUser = async ({ email, password }) => {

@@ -2,7 +2,19 @@ const UserOperations = require("../db/user.operation");
 const tokenService = require("../services/token.service");
 const User = require("../models/user");
 const ApiError = require("../error/errorClass");
-const { ORIGIN } = require("../const/settings");
+
+const checkActivateLink = async (req, res, next) => {
+  try {
+    const { link } = req.params;
+    const user = await User.findOne({ activationLink: link }).and({
+      isActivated: false,
+    });
+    if (!user) return next(ApiError.notFound("Not found user with this link"));
+    return res.json();
+  } catch (e) {
+    next(e);
+  }
+};
 
 const activate = async (req, res, next) => {
   try {
@@ -10,12 +22,12 @@ const activate = async (req, res, next) => {
     if (!link) return next(ApiError.badRequest("Invalid link"));
     const user = await User.findOne({ activationLink: link });
     if (user.isActivated) {
-      return next(ApiError.badRequest("Link is not active"));
+      return next(ApiError.badRequest("Account is activated"));
     }
     if (!user) return next(ApiError.notFound("Not found user with this link"));
     user.isActivated = true;
     await user.save();
-    return res.redirect(ORIGIN);
+    return res.json({ message: "Success" });
   } catch (e) {
     next(e);
   }
@@ -155,4 +167,5 @@ module.exports = {
   handleRefresh,
   logout,
   updateUserData,
+  checkActivateLink,
 };
