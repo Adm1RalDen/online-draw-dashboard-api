@@ -26,19 +26,19 @@ const RegisterUser = async (data) => {
   const hash_password = Crypto.SHA256(password).toString();
   const activationLink = nanoid();
 
-  // const user = await createUser({ email, password: hash_password, name, activationLink });
+  const user = await createUser({ email, password: hash_password, name, activationLink });
 
-  // fs.mkdir(path.resolve(__dirname, "..", "static", "users", user.id), (err) => {
-  //   if (err) {
-  //     throw err;
-  //   }
-  // });
+  fs.mkdir(path.resolve(__dirname, "..", "static", "users", user.id), (err) => {
+    if (err) {
+      throw err;
+    }
+  });
 
   await mailService.sendActivationMail(
     email,
     `${ORIGIN}/activate/${activationLink}`
   );
-  // return user;
+  return user;
 };
 
 const LoginUser = async ({ email, password }) => {

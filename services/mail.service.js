@@ -25,15 +25,15 @@ const sendActivationMail = async (email, link) => {
     text: "",
     html: `
     <div style="font-family:Roboto">
-      <div style="height: 50px; background-color: #183333; color: #fff; padding: 10px;border-top-left-radius: 5px;border-top-right-radius: 5px;">      
-        <h1 style="margin:0px;">Draw Online</h1>
+      <div style="background-color: #183333; color: #ffffff; padding: 10px;border-top-left-radius: 5px;border-top-right-radius: 5px;">      
+        <h1 style="margin:0px; color: #fff;">Draw Online</h1>
       </div>
       <div style="height:200px;border:2px solid #d7d7d7;border-radius: 5px; overflow:hidden; border-top-left-radius: 0px;border-top-right-radius: 0px;border-top:0px; padding: 10px">
-       <p style="font-size:18px; line-height: 28px;">We are glad to welcome you to our drawing site</br>
-         You have registered through our website</br>
-         Your data for authorization on the site</br>
-         login </br>
-         follow the link to confirm <a href=${link}>link</a></br>
+       <p style="font-size:18px; line-height: 28px; font-weight: 300">We are glad to welcome you to our drawing site<br>
+         You have registered through our website<br>
+         Your data for authorization on the site<br>
+         login <span style="color:#107bff">${email}</span><br>
+         Follow the link to confirm your account <a href=${link} target='_blank' title='Go to DrawOnline website'>link</a><br>
        </p>
       </div>
      </div>
