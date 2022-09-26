@@ -7,7 +7,9 @@ const path = require("path");
 const fs = require("fs");
 const ApiError = require("../error/errorClass");
 const { HOST } = require("../const/settings");
-const GET_USER_SELECT = "name age email id city country color gender date biography role avatar backgroundFon";
+const { getTypeFromMime } = require("../utils/getTypeFromMime");
+const GET_USER_SELECT =
+  "name age email id city country color gender date biography role avatar backgroundFon originalAvatar";
 
 const CheckUser = async (email) => {
   const candidate = await User.findOne({ email });
@@ -25,7 +27,12 @@ const RegisterUser = async (data) => {
   const hash_password = Crypto.SHA256(password).toString();
   const activationLink = nanoid();
 
-  const user = await createUser({ email, password: hash_password, name, activationLink });
+  const user = await createUser({
+    email,
+    password: hash_password,
+    name,
+    activationLink,
+  });
 
   fs.mkdir(path.resolve(__dirname, "..", "static", "users", user.id), (err) => {
     if (err) {
@@ -33,7 +40,10 @@ const RegisterUser = async (data) => {
     }
   });
 
-  await mailService.sendActivationMail(email, `${HOST}/api/user/activate/${activationLink}`);
+  await mailService.sendActivationMail(
+    email,
+    `${HOST}/api/user/activate/${activationLink}`
+  );
   return user;
 };
 
@@ -66,20 +76,31 @@ const Logout = async (refreshToken) => {
   return token;
 };
 
-const Update = async ({ id, email, password, ...data }, { avatar, backgroundFon }) => {
-  const avatarPath = `users/${id}/${id}_avatar.png`;
-  const backgroundPath = `users/${id}/${id}_background.jpg`;
-
+const Update = async (
+  { id, email, password, ...data },
+  { avatar, backgroundFon, originalAvatar }
+) => {
   let resultObject = {};
 
   if (avatar) {
+    const ext = getTypeFromMime(avatar.mimetype);
+    const avatarPath = `users/${id}/${id}_avatar.${ext}`;
     await avatar.mv(
-      path.resolve(__dirname, "..", "static", "users", id, `${id}_avatar.png`)
+      path.resolve(
+        __dirname,
+        "..",
+        "static",
+        "users",
+        id,
+        `${id}_avatar.${ext}`
+      )
     );
     resultObject = { ...resultObject, avatar: avatarPath };
   }
-  
+
   if (backgroundFon) {
+    const ext = getTypeFromMime(backgroundFon.mimetype);
+    const backgroundPath = `users/${id}/${id}_background.${ext}`;
     await backgroundFon.mv(
       path.resolve(
         __dirname,
@@ -87,10 +108,26 @@ const Update = async ({ id, email, password, ...data }, { avatar, backgroundFon 
         "static",
         "users",
         id,
-        `${id}_background.jpg`
+        `${id}_background.${ext}`
       )
     );
     resultObject = { ...resultObject, backgroundFon: backgroundPath };
+  }
+
+  if (originalAvatar) {
+    const ext = getTypeFromMime(originalAvatar.mimetype);
+    const originalAvatarPath = `users/${id}/${id}_originalAvatar.${ext}`;
+    await originalAvatar.mv(
+      path.resolve(
+        __dirname,
+        "..",
+        "static",
+        "users",
+        id,
+        `${id}_originalAvatar.${ext}`
+      )
+    );
+    resultObject = { ...resultObject, originalAvatar: originalAvatarPath };
   }
 
   resultObject = { ...resultObject, ...data };
