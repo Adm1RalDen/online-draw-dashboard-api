@@ -1,6 +1,7 @@
 const API = "/api";
 const ROOM = "/room";
 const USER = "/user";
+const AUTH = "/auth";
 
 const CREATE_ROOM_URL = "/create";
 const ENTER_ROOM_URL = "/enter";
@@ -17,6 +18,8 @@ const GET_USER_URL = "/:id";
 const REFRESH_URL = "/refresh";
 const UPDATE_URL = "/update";
 
+const GOOGLE_SIGN_IN_URL = '/google';
+const GOOGLE_SIGN_IN_CALLBACK_URL = '/google/callback'
 
 const USER_ENDPOINTS = {
   REGISTRATION_URL,
@@ -36,4 +39,9 @@ const ROOM_ENDPOINTS = {
   LEAVE_URL,
   CHECK_PASSWORD_URL
 }
-module.exports = { API, ROOM, USER, ROOM_ENDPOINTS, USER_ENDPOINTS };
+
+const GOOGLE_AUTH_ENDPOINTS = {
+  GOOGLE_SIGN_IN_URL,
+  GOOGLE_SIGN_IN_CALLBACK_URL
+}
+module.exports = { API, ROOM, USER, AUTH, ROOM_ENDPOINTS, USER_ENDPOINTS, GOOGLE_AUTH_ENDPOINTS };
