@@ -17,11 +17,13 @@ const ACTIVATION_LINK_URL = "/activate/:link";
 const GET_USER_URL = "/:id";
 const REFRESH_URL = "/refresh";
 const UPDATE_URL = "/update";
+const VERIFY_2FA_URL = "/verify"
 
 const GOOGLE_SIGN_IN_URL = '/google';
 const GOOGLE_SIGN_IN_CALLBACK_URL = '/google/callback'
 
 const USER_ENDPOINTS = {
+  VERIFY_2FA_URL,
   REGISTRATION_URL,
   LOGIN_URL,
   LOGOUT_URL,

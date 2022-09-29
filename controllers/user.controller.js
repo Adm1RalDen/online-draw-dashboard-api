@@ -3,6 +3,35 @@ const tokenService = require("../services/token.service");
 const User = require("../models/user");
 const ApiError = require("../error/errorClass");
 const { ORIGIN } = require("../const/settings");
+const Secret2FA = require("../models/user2FA");
+const speakeasy = require("speakeasy");
+
+const verify2FA = async (req, res, next) => {
+  try {
+    const { userId, code } = req.body;
+    if (!userId || !code) throw ApiError.badRequest("Invalid data");
+    const userSecret = await Secret2FA.findOne({ userId });
+    const isVerify = speakeasy.totp.verify({
+      secret: userSecret.secretKey,
+      encoding: "base32",
+      token: code,
+    });
+    if (!isVerify) throw next(ApiError.forbidden("Invalid code"));
+    const user = await User.findById(userId);
+    const tokens = tokenService.generateToken(user.id, user.email, user.role);
+    const userData = {
+      token: tokens.access,
+      refreshToken: tokens.refresh,
+      user: {
+        name: user.name,
+        id: user.id,
+      },
+    };
+    return res.json(userData);
+  } catch (e) {
+    next(e);
+  }
+};
 
 const activate = async (req, res, next) => {
   try {
@@ -37,7 +66,8 @@ const registration = async (req, res, next) => {
     });
 
     return res.json({
-      message: "Letter was send in your email. Please confirm your email adress",
+      message:
+        "Letter was send in your email. Please confirm your email adress",
     });
   } catch (e) {
     await User.findOneAndDelete({ email: req.body.email });
@@ -47,6 +77,7 @@ const registration = async (req, res, next) => {
 
 const login = async (req, res, next) => {
   try {
+    console.log("LOGIN");
     const { email, password } = req.body;
     if (!email || !password) {
       return next(ApiError.badRequest("Invalid data"));
@@ -155,4 +186,5 @@ module.exports = {
   handleRefresh,
   logout,
   updateUserData,
+  verify2FA,
 };
