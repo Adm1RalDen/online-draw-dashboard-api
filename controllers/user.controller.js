@@ -3,19 +3,6 @@ const tokenService = require("../services/token.service");
 const User = require("../models/user");
 const ApiError = require("../error/errorClass");
 
-const checkActivateLink = async (req, res, next) => {
-  try {
-    const { link } = req.params;
-    const user = await User.findOne({ activationLink: link }).and({
-      isActivated: false,
-    });
-    if (!user) return next(ApiError.notFound("Not found user with this link"));
-    return res.json();
-  } catch (e) {
-    next(e);
-  }
-};
-
 const activate = async (req, res, next) => {
   try {
     const { link } = req.params;
@@ -167,5 +154,4 @@ module.exports = {
   handleRefresh,
   logout,
   updateUserData,
-  checkActivateLink,
 };
