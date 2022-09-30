@@ -8,8 +8,6 @@ const fs = require("fs");
 const ApiError = require("../error/errorClass");
 const { HOST } = require("../const/settings");
 const { getTypeFromMime } = require("../utils/getTypeFromMime");
-const GET_USER_SELECT =
-  "name age email id city country color gender date biography role avatar backgroundFon originalAvatar";
 
 const CheckUser = async (email) => {
   const candidate = await User.findOne({ email });
@@ -64,7 +62,7 @@ const LoginUser = async ({ email, password }) => {
 
 const GetUser = async (id) => {
   try {
-    const user = await User.findById(id, GET_USER_SELECT);
+    const user = await User.findById(id).select("-__v -activationLink -isActivated -password -isUserInRoom");
     return user;
   } catch {
     throw ApiError.notFound("User is not found");
