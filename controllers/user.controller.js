@@ -2,20 +2,22 @@ const UserOperations = require("../db/user.operation");
 const tokenService = require("../services/token.service");
 const User = require("../models/user");
 const ApiError = require("../error/errorClass");
-const { ORIGIN } = require("../const/settings");
 
 const activate = async (req, res, next) => {
   try {
     const { link } = req.params;
     if (!link) return next(ApiError.badRequest("Invalid link"));
     const user = await User.findOne({ activationLink: link });
+    if (!user) {
+      return next(ApiError.badRequest("Occured error"));
+    }
     if (user.isActivated) {
-      return next(ApiError.badRequest("Link is not active"));
+      return next(ApiError.badRequest("Account is activated"));
     }
     if (!user) return next(ApiError.notFound("Not found user with this link"));
     user.isActivated = true;
     await user.save();
-    return res.redirect(ORIGIN);
+    return res.json({ message: "Success" });
   } catch (e) {
     next(e);
   }
@@ -37,7 +39,8 @@ const registration = async (req, res, next) => {
     });
 
     return res.json({
-      message: "Letter was send in your email. Please confirm your email adress",
+      message:
+        "Letter was send in your email. Please confirm your email adress",
     });
   } catch (e) {
     await User.findOneAndDelete({ email: req.body.email });
@@ -125,8 +128,7 @@ const updateUserData = async (req, res, next) => {
 
     await UserOperations.Update(data, files);
     return res.json({ message: "Updated" });
-  } catch (e) {
-    console.log("ERROR\n", e)
+  } catch (e) { 
     next(e);
   }
 };

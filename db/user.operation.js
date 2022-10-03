@@ -6,7 +6,7 @@ const Token = require("../models/token");
 const path = require("path");
 const fs = require("fs");
 const ApiError = require("../error/errorClass");
-const { HOST } = require("../const/settings");
+const { ORIGIN } = require("../const/settings");
 const { getTypeFromMime } = require("../utils/getTypeFromMime");
 
 const CheckUser = async (email) => {
@@ -40,7 +40,7 @@ const RegisterUser = async (data) => {
 
   await mailService.sendActivationMail(
     email,
-    `${HOST}/api/user/activate/${activationLink}`
+    `${ORIGIN}/activate/${activationLink}`
   );
   return user;
 };
