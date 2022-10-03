@@ -8,6 +8,9 @@ const activate = async (req, res, next) => {
     const { link } = req.params;
     if (!link) return next(ApiError.badRequest("Invalid link"));
     const user = await User.findOne({ activationLink: link });
+    if (!user) {
+      return next(ApiError.badRequest("Occured error"));
+    }
     if (user.isActivated) {
       return next(ApiError.badRequest("Account is activated"));
     }
@@ -36,7 +39,8 @@ const registration = async (req, res, next) => {
     });
 
     return res.json({
-      message: "Letter was send in your email. Please confirm your email adress",
+      message:
+        "Letter was send in your email. Please confirm your email adress",
     });
   } catch (e) {
     await User.findOneAndDelete({ email: req.body.email });
