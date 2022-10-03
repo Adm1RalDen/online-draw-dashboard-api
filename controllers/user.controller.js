@@ -114,7 +114,7 @@ const handleRefresh = async (req, res, next) => {
 const updateUserData = async (req, res, next) => {
   try {
     const data = req.body;
-    const files = req.files || { avatar: null, backgroundFon: null };
+    const files = req.files || { avatar: null, backgroundFon: null, originalAvatar: null };
 
     if (!data.id) {
       return next(ApiError.badRequest("Invalid data in request"));
@@ -128,7 +128,7 @@ const updateUserData = async (req, res, next) => {
 
     await UserOperations.Update(data, files);
     return res.json({ message: "Updated" });
-  } catch (e) {
+  } catch (e) { 
     next(e);
   }
 };
