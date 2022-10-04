@@ -38,13 +38,16 @@ const activate = async (req, res, next) => {
     const { link } = req.params;
     if (!link) return next(ApiError.badRequest("Invalid link"));
     const user = await User.findOne({ activationLink: link });
+    if (!user) {
+      return next(ApiError.badRequest("Occured error"));
+    }
     if (user.isActivated) {
-      return next(ApiError.badRequest("Link is not active"));
+      return next(ApiError.badRequest("Account is activated"));
     }
     if (!user) return next(ApiError.notFound("Not found user with this link"));
     user.isActivated = true;
     await user.save();
-    return res.redirect(ORIGIN);
+    return res.json({ message: "Success" });
   } catch (e) {
     next(e);
   }
@@ -142,7 +145,7 @@ const handleRefresh = async (req, res, next) => {
 const updateUserData = async (req, res, next) => {
   try {
     const data = req.body;
-    const files = req.files || { avatar: null, backgroundFon: null };
+    const files = req.files || { avatar: null, backgroundFon: null, originalAvatar: null };
 
     if (!data.id) {
       return next(ApiError.badRequest("Invalid data in request"));
@@ -156,7 +159,7 @@ const updateUserData = async (req, res, next) => {
 
     await UserOperations.Update(data, files);
     return res.json({ message: "Updated" });
-  } catch (e) {
+  } catch (e) { 
     next(e);
   }
 };
