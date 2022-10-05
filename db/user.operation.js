@@ -62,7 +62,7 @@ const LoginUser = async ({ email, password }) => {
 
 const GetUser = async (id) => {
   try {
-    const user = await User.findById(id).select("-__v -activationLink -isActivated -password -isUserInRoom -limitRooms -rooms -isUse2FA");
+    const user = await User.findById(id).select("-__v -activationLink -isActivated -password -isUserInRoom -limitRooms -rooms");
     return user;
   } catch {
     throw ApiError.notFound("User is not found");
