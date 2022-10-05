@@ -12,12 +12,14 @@ const use2FAmiddleware = async (req, res, next) => {
 
   if (!email || !password) return next(ApiError.badRequest("Invalid data"));
   const hash_password = Crypto.SHA256(password).toString();
-  const currentUser = await User.findOne({ email, password: hash_password });
+  const currentUser = await User.findOne({ email });
 
-  if (!currentUser) return next(ApiError.forbidden("Error auth"));
+  if (!currentUser) return next(ApiError.forbidden("User is not authorized"));
+  if (hash_password !== currentUser.password) return next(ApiError.forbidden("Invalid password"));
+
   if (!currentUser.isUse2FA) return next();
 
-  const secret = speakeasy.generateSecret({ name: "code" });
+  const secret = speakeasy.generateSecret({ name: "Draw online" });
   const isExistUserSecret2FA = await Secret2FA.findOne({
     userId: currentUser.id,
   });
