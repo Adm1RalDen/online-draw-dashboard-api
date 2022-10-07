@@ -1,6 +1,7 @@
 const API = "/api";
 const ROOM = "/room";
 const USER = "/user";
+const AUTH = "/auth";
 
 const CREATE_ROOM_URL = "/create";
 const ENTER_ROOM_URL = "/enter";
@@ -16,9 +17,14 @@ const ACTIVATION_LINK_URL = "/activate/:link";
 const GET_USER_URL = "/:id";
 const REFRESH_URL = "/refresh";
 const UPDATE_URL = "/update";
+const VERIFY_2FA_URL = "/verify"
 
+const GOOGLE_SIGN_IN_ENDPOINT = '/google';
+const GOOGLE_SIGN_IN_CALLBACK_ENDPOINT = '/google/callback'
+const GOOGLE_SIGN_IN_FAILURE_ENDPOINT = '/api/auth/google/failure'
 
 const USER_ENDPOINTS = {
+  VERIFY_2FA_URL,
   REGISTRATION_URL,
   LOGIN_URL,
   LOGOUT_URL,
@@ -36,4 +42,10 @@ const ROOM_ENDPOINTS = {
   LEAVE_URL,
   CHECK_PASSWORD_URL
 }
-module.exports = { API, ROOM, USER, ROOM_ENDPOINTS, USER_ENDPOINTS };
+
+const GOOGLE_AUTH_ENDPOINTS = {
+  GOOGLE_SIGN_IN_ENDPOINT,
+  GOOGLE_SIGN_IN_CALLBACK_ENDPOINT,
+  GOOGLE_SIGN_IN_FAILURE_ENDPOINT
+}
+module.exports = { API, ROOM, USER, AUTH, ROOM_ENDPOINTS, USER_ENDPOINTS, GOOGLE_AUTH_ENDPOINTS };
