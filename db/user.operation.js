@@ -49,20 +49,25 @@ const LoginUser = async ({ email, password }) => {
   const user = await User.findOne({ email }).select("-__v -activationLink");
 
   if (!user) throw ApiError.notFound("User is not exist");
+
   if (user.isActivated === false) {
     throw ApiError.conflict("Please confirm your email adress");
   }
 
   const hash_password = Crypto.SHA256(password).toString();
-  if (hash_password !== user.password)
-    throw ApiError.badRequest("Invalid password");
 
+  if (hash_password !== user.password) {
+    throw ApiError.badRequest("Invalid password");
+  }
+  
   return user;
 };
 
 const GetUser = async (id) => {
   try {
-    const user = await User.findById(id).select("-__v -activationLink -isActivated -password -isUserInRoom -limitRooms -rooms");
+    const user = await User.findById(id).select(
+      "-__v -activationLink -isActivated -password -isUserInRoom -limitRooms -rooms"
+    );
     return user;
   } catch {
     throw ApiError.notFound("User is not found");

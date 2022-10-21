@@ -2,21 +2,25 @@ const UserOperations = require("../db/user.operation");
 const tokenService = require("../services/token.service");
 const User = require("../models/user");
 const ApiError = require("../error/errorClass");
-const { ORIGIN } = require("../const/settings");
 const Secret2FA = require("../models/user2FA");
-const speakeasy = require("speakeasy");
+const qrcode = require("qrcode");
+const Crypto = require("crypto-js");
+const { send2FaCodeOnMail } = require("../services/mail.service");
+const { generateStrOfNumbers } = require("../utils/generateStrOfNumbers");
+const TwoFA = require("../services/twoFa.service");
 
 const verify2FA = async (req, res, next) => {
   try {
-    const { userId, code } = req.body;
-    if (!userId || !code) throw ApiError.badRequest("Invalid data");
+    const { userId, secure2FACode } = req.body;
+
+    if (!userId || !secure2FACode) throw ApiError.badRequest("Invalid data");
+
     const userSecret = await Secret2FA.findOne({ userId });
-    const isVerify = speakeasy.totp.verify({
-      secret: userSecret.secretKey,
-      encoding: "base32",
-      token: code,
-    });
+
+    const isVerify = TwoFA.verify2Fa(userSecret.secretKey, secure2FACode);
+
     if (!isVerify) throw next(ApiError.forbidden("Invalid code"));
+
     const user = await User.findById(userId);
     const tokens = tokenService.generateToken(user.id, user.email, user.role);
     const userData = {
@@ -27,6 +31,7 @@ const verify2FA = async (req, res, next) => {
         id: user.id,
       },
     };
+
     return res.json(userData);
   } catch (e) {
     next(e);
@@ -80,13 +85,18 @@ const registration = async (req, res, next) => {
 
 const login = async (req, res, next) => {
   try {
-    console.log("LOGIN");
     const { email, password } = req.body;
+
     if (!email || !password) {
-      return next(ApiError.badRequest("Invalid data"));
+      throw ApiError.badRequest("Invalid data");
     }
 
     const user = await UserOperations.LoginUser({ email, password });
+
+    if (user.isUse2FA) {
+      return res.json({ userId: user.id, isUse2FA: true });
+    }
+
     const token = tokenService.generateToken(user._id, user.email, user.role);
     await tokenService.saveToken(user.id, token.refresh);
 
@@ -145,10 +155,14 @@ const handleRefresh = async (req, res, next) => {
 const updateUserData = async (req, res, next) => {
   try {
     const data = req.body;
-    const files = req.files || { avatar: null, backgroundFon: null, originalAvatar: null };
+    const files = req.files || {
+      avatar: null,
+      backgroundFon: null,
+      originalAvatar: null,
+    };
 
     if (!data.id) {
-      return next(ApiError.badRequest("Invalid data in request"));
+      throw ApiError.badRequest("Invalid data in request");
     }
 
     try {
@@ -159,7 +173,7 @@ const updateUserData = async (req, res, next) => {
 
     await UserOperations.Update(data, files);
     return res.json({ message: "Updated" });
-  } catch (e) { 
+  } catch (e) {
     next(e);
   }
 };
@@ -167,15 +181,129 @@ const updateUserData = async (req, res, next) => {
 const getUser = async (req, res, next) => {
   try {
     const { id } = req.params;
+
     if (!id) {
-      return next(ApiError.badRequest("Invalid data"));
+      throw ApiError.badRequest("Invalid data");
     }
+
     const user = await UserOperations.GetUser(id);
+
     if (!user) {
-      return next(ApiError.notFound("User is not authorized"));
+      throw ApiError.notAuthorized("User is not authorized");
     }
+
     const { _id, ...data } = user._doc;
     return res.json({ ...data, id: _id });
+  } catch (e) {
+    next(e);
+  }
+};
+
+const send2FaCodeOnEmail = async (req, res, next) => {
+  try {
+    const { id } = req.user;
+    const user = await User.findById(id);
+    const code = generateStrOfNumbers(6);
+
+    await Secret2FA.findOneAndUpdate({ userId: id }, { emailCode: code });
+    send2FaCodeOnMail(user.email, code);
+
+    return res.json();
+  } catch (e) {
+    next(e);
+  }
+};
+
+const disable2Fa = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { password, secure2FACode } = req.body;
+    
+    if (!password || !secure2FACode) {
+      throw ApiError.badRequest("Invalid data");
+    }
+
+    const user = await User.findById(userId);
+
+    if (!user.isUse2FA) {
+      throw ApiError.forbidden("Invalid request");
+    }
+
+    const hashPassword = Crypto.SHA256(password);
+
+    if (user.password != hashPassword) {
+      throw ApiError.forbidden("Invalid password");
+    }
+
+    const userSecret = await Secret2FA.findOne({ userId });
+
+    if (!TwoFA.verify2Fa(userSecret.secretKey, secure2FACode)) {
+      throw ApiError.forbidden("Invalid code");
+    }
+
+    user.isUse2FA = false;
+  
+    await user.save();
+    await userSecret.delete();
+
+    return res.json({ message: "Disabled successfully" });
+  } catch (e) {
+    next(e);
+  }
+};
+
+const confirmCreating2Fa = async (req, res, next) => {
+  try {
+    const { secure2FACode, emailCode } = req.body;
+    const { id } = req.user;
+
+    const secret = await Secret2FA.findOne({ userId: id }).and({ emailCode });
+
+    if (!secret) {
+      throw ApiError.badRequest("Invalid code from Email");
+    }
+
+    const isVerified = TwoFA.verify2Fa(secret.secretKey, secure2FACode);
+
+    if (!isVerified) {
+      throw ApiError.badRequest("Invalid code from Google Authentificator");
+    }
+
+    await User.findByIdAndUpdate(id, { isUse2FA: true });
+    return res.json();
+  } catch (e) {
+    next(e);
+  }
+};
+
+const create2Fa = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const secret = TwoFA.generateSecret();
+
+    qrcode.toDataURL(secret.otpauth_url, async function (err, data) {
+      if (err) throw ApiError.internal("Server error");
+      if (data) {
+        const isExistSecret = await Secret2FA.findOne({ userId });
+
+        if (isExistSecret) {
+          isExistSecret.secretKey = secret.base32;
+          await isExistSecret.save();
+        } else {
+          await Secret2FA.create({
+            userId: userId,
+            secretKey: secret.base32,
+          });
+        }
+
+        return res.json({
+          isUse2FA: true,
+          userId: userId,
+          secretKey: secret.base32,
+          qrcode: data,
+        });
+      }
+    });
   } catch (e) {
     next(e);
   }
@@ -190,4 +318,8 @@ module.exports = {
   logout,
   updateUserData,
   verify2FA,
+  create2Fa,
+  confirmCreating2Fa,
+  send2FaCodeOnEmail,
+  disable2Fa,
 };
