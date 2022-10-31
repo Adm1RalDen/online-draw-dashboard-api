@@ -8,6 +8,7 @@ const fs = require("fs");
 const ApiError = require("../error/errorClass");
 const { ORIGIN } = require("../const/settings");
 const { getTypeFromMime } = require("../utils/getTypeFromMime");
+const Secret2FA = require("../models/user2FA");
 
 const CheckUser = async (email) => {
   const candidate = await User.findOne({ email });
@@ -59,7 +60,7 @@ const LoginUser = async ({ email, password }) => {
   if (hash_password !== user.password) {
     throw ApiError.badRequest("Invalid password");
   }
-  
+
   return user;
 };
 
@@ -139,6 +140,34 @@ const Update = async (
   return res;
 };
 
+const checkUser2FaAbility = async (id) => {
+  const userSecret =  await Secret2FA.findOne({ userId: id });
+
+  if (!userSecret) throw ApiError.forbidden("Occured error");
+
+  const isExpiredTimeToNextAttempt = new Date(userSecret.failAttemptsCommittedAt + 600000).getTime() < Date.now();
+
+  if (userSecret.attemptsLeftCount === 0 && isExpiredTimeToNextAttempt) {
+    userSecret.attemptsLeftCount = 3;
+    await userSecret.save();
+
+    return userSecret;
+  }
+
+  const tryAgainAcross = new Date(userSecret.failAttemptsCommittedAt + 600000 - Date.now());
+
+  if (!isExpiredTimeToNextAttempt || userSecret.attemptsLeftCount === 0) {
+    throw ApiError.forbidden(
+      `You ran out of attempts try again across ${tryAgainAcross.getMinutes()
+        ? tryAgainAcross.getMinutes() + " minutes"
+        : tryAgainAcross.getSeconds() + " seconds"
+      } `
+    );
+  }
+
+  return userSecret;
+};
+
 module.exports = {
   CheckUser,
   RegisterUser,
@@ -146,4 +175,5 @@ module.exports = {
   GetUser,
   Logout,
   Update,
+  checkUser2FaAbility,
 };

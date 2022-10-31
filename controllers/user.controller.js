@@ -1,13 +1,16 @@
 const UserOperations = require("../db/user.operation");
 const tokenService = require("../services/token.service");
 const User = require("../models/user");
-const ApiError = require("../error/errorClass");
 const Secret2FA = require("../models/user2FA");
 const qrcode = require("qrcode");
+
+const ApiError = require("../error/errorClass");
 const Crypto = require("crypto-js");
+const TwoFA = require("../services/twoFa.service");
+
 const { send2FaCodeOnMail } = require("../services/mail.service");
 const { generateStrOfNumbers } = require("../utils/generateStrOfNumbers");
-const TwoFA = require("../services/twoFa.service");
+
 
 const verify2FA = async (req, res, next) => {
   try {
@@ -15,11 +18,19 @@ const verify2FA = async (req, res, next) => {
 
     if (!userId || !secure2FACode) throw ApiError.badRequest("Invalid data");
 
-    const userSecret = await Secret2FA.findOne({ userId });
-
+    const userSecret = await UserOperations.checkUser2FaAbility(userId);
     const isVerify = TwoFA.verify2Fa(userSecret.secretKey, secure2FACode);
 
-    if (!isVerify) throw next(ApiError.forbidden("Invalid code"));
+    if (!isVerify) {
+      userSecret.attemptsLeftCount -= 1;
+
+      if (userSecret.attemptsLeftCount === 0) {
+        userSecret.failAttemptsCommittedAt = Date.now();
+      }
+
+      await userSecret.save();
+      throw next(ApiError.forbidden("Invalid code"));
+    }
 
     const user = await User.findById(userId);
     const tokens = tokenService.generateToken(user.id, user.email, user.role);
@@ -32,6 +43,10 @@ const verify2FA = async (req, res, next) => {
       },
     };
 
+    userSecret.failAttemptsCommittedAt = 0;
+    userSecret.attemptsLeftCount = 3;
+
+    await userSecret.save();
     return res.json(userData);
   } catch (e) {
     next(e);
@@ -94,7 +109,13 @@ const login = async (req, res, next) => {
     const user = await UserOperations.LoginUser({ email, password });
 
     if (user.isUse2FA) {
-      return res.json({ userId: user.id, isUse2FA: true });
+      const userSecret = await UserOperations.checkUser2FaAbility(user.id);
+
+      return res.json({
+        userId: user.id,
+        isUse2FA: true,
+        attemptsLeftCount: userSecret.attemptsLeftCount,
+      });
     }
 
     const token = tokenService.generateToken(user._id, user.email, user.role);
@@ -135,6 +156,7 @@ const logout = async (req, res, next) => {
 const handleRefresh = async (req, res, next) => {
   try {
     const { refreshToken } = req.body;
+    
     if (!refreshToken) {
       return next(ApiError.notAuthorized("User is not authorized"));
     }
@@ -218,7 +240,7 @@ const disable2Fa = async (req, res, next) => {
   try {
     const userId = req.user.id;
     const { password, secure2FACode } = req.body;
-    
+
     if (!password || !secure2FACode) {
       throw ApiError.badRequest("Invalid data");
     }
@@ -242,7 +264,7 @@ const disable2Fa = async (req, res, next) => {
     }
 
     user.isUse2FA = false;
-  
+
     await user.save();
     await userSecret.delete();
 

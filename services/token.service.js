@@ -5,10 +5,10 @@ const Token = require("../models/token");
 
 const generateToken = (id, email, role) => {
   const access = jwt.sign({ id, email, role }, SECRETKEY, {
-    expiresIn: "1d",
+    expiresIn: "5m",
   });
   const refresh = jwt.sign({ id, email, role }, JWT_REFRESH_SECRET, {
-    expiresIn: "30d",
+    expiresIn: "6m",
   });
   return { access, refresh };
 };
@@ -28,6 +28,7 @@ const saveToken = async (userId, refreshToken) => {
 
 const refresh = async (refreshToken) => {
   let tokenData;
+
   try {
     tokenData = jwt.verify(refreshToken, JWT_REFRESH_SECRET);
   } catch (e) {
@@ -38,10 +39,11 @@ const refresh = async (refreshToken) => {
     throw ApiError.notAuthorized("User is not authorized");
   }
 
-  const exist = await Token.findOne({ refreshToken });
-  if (!exist) {
-    throw ApiError.notAuthorized("User is not authorized");
-  }
+  // const exist = await Token.findOne({ refreshToken });
+
+  // if (!exist) {
+  //   throw ApiError.notAuthorized("User is not authorized");
+  // }
 
   const token = generateToken(tokenData.id, tokenData.name, tokenData.role);
   await saveToken(tokenData.id, token.refresh);

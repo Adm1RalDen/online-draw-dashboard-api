@@ -5,16 +5,26 @@ const {
   GOOGLE_USE2FA_REDIRECT,
   FAILURE_GOOGLE_REDIRECT,
 } = require("../const/redirects");
+const { checkUser2FaAbility } = require("../db/user.operation");
 
 const handleGoogleLogin = async (req, res) => {
   try {
     const profile = req.user;
     const user = await User.findOne({ email: profile.emails[0].value });
 
-    if (!user) throw "User is not authorized";
+    if (!user) throw "You aren`t registrated on DrawOnline";
 
     if (user.isUse2FA) {
-      return res.redirect(`${GOOGLE_USE2FA_REDIRECT}?userId=${user.id}`);
+      const userSecret = await checkUser2FaAbility(user.id);
+      let buff = Buffer.from(
+        JSON.stringify({
+          userId: user.id,
+          attemptsLeftCount: userSecret.attemptsLeftCount,
+        })
+      );
+  
+      let base64data = buff.toString("base64");
+      return res.redirect(`${GOOGLE_USE2FA_REDIRECT}?data=${base64data}`);
     }
 
     const tokens = generateToken(user.id, user.email, user.role);
@@ -32,7 +42,7 @@ const handleGoogleLogin = async (req, res) => {
   } catch (e) {
     return res.redirect(
       `${FAILURE_GOOGLE_REDIRECT}?error=${
-        typeof e === "string" ? e : JSON.stringify(e)
+        typeof e === "string" ? e : e?.message || JSON.stringify(e)
       }`
     );
   }
