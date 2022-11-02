@@ -9,10 +9,9 @@ const SMTP_PASSWORD = process.env.SMTP_PASSWORD;
 const SECRETKEY = process.env.SECRETKEY;
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
 const ORIGIN = process.env.ORIGIN;
-
-const STATIC_FOLDER = "static";
-const ACCESS_TOKEN_EXPIRES_IN = "5m";
-const REFRESH_TOKEN_EXPIRES_IN = "6m";
+const STATIC_FOLDER = process.env.STATIC_FOLDER;
+const ACCESS_TOKEN_EXPIRES_IN = process.env.ACCESS_TOKEN_EXPIRES_IN;
+const REFRESH_TOKEN_EXPIRES_IN = process.env.REFRESH_TOKEN_EXPIRES_IN;
 
 module.exports = {
   HOST,
