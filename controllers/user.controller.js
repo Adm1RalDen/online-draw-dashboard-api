@@ -8,7 +8,7 @@ const ApiError = require("../error/errorClass");
 const Crypto = require("crypto-js");
 const TwoFA = require("../services/twoFa.service");
 
-const { send2FaCodeOnMail } = require("../services/mail.service");
+const emailService = require("../services/mail.service");
 const { generateStrOfNumbers } = require("../utils/generateStrOfNumbers");
 
 
@@ -228,7 +228,7 @@ const send2FaCodeOnEmail = async (req, res, next) => {
     const code = generateStrOfNumbers(6);
 
     await Secret2FA.findOneAndUpdate({ userId: id }, { emailCode: code });
-    send2FaCodeOnMail(user.email, code);
+    await emailService.send2FaCodeOnMail(user.email, code);
 
     return res.json();
   } catch (e) {

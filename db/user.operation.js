@@ -1,7 +1,7 @@
 const User = require("../models/user");
 const Crypto = require("crypto-js");
 const { nanoid } = require("nanoid");
-const mailService = require("../services/mail.service");
+const { sendActivationMail } = require("../services/mail.service");
 const Token = require("../models/token");
 const path = require("path");
 const fs = require("fs");
@@ -39,10 +39,8 @@ const RegisterUser = async (data) => {
     }
   });
 
-  await mailService.sendActivationMail(
-    email,
-    `${ORIGIN}/activate/${activationLink}`
-  );
+  await sendActivationMail(email, `${ORIGIN}/activate/${activationLink}`);
+
   return user;
 };
 
@@ -141,11 +139,13 @@ const Update = async (
 };
 
 const checkUser2FaAbility = async (id) => {
-  const userSecret =  await Secret2FA.findOne({ userId: id });
+  const userSecret = await Secret2FA.findOne({ userId: id });
 
   if (!userSecret) throw ApiError.forbidden("Occured error");
 
-  const isExpiredTimeToNextAttempt = new Date(userSecret.failAttemptsCommittedAt + 600000).getTime() < Date.now();
+  const isExpiredTimeToNextAttempt =
+    new Date(userSecret.failAttemptsCommittedAt + 600000).getTime() <
+    Date.now();
 
   if (userSecret.attemptsLeftCount === 0 && isExpiredTimeToNextAttempt) {
     userSecret.attemptsLeftCount = 3;
@@ -154,13 +154,16 @@ const checkUser2FaAbility = async (id) => {
     return userSecret;
   }
 
-  const tryAgainAcross = new Date(userSecret.failAttemptsCommittedAt + 600000 - Date.now());
+  const tryAgainAcross = new Date(
+    userSecret.failAttemptsCommittedAt + 600000 - Date.now()
+  );
 
   if (!isExpiredTimeToNextAttempt || userSecret.attemptsLeftCount === 0) {
     throw ApiError.forbidden(
-      `You ran out of attempts try again across ${tryAgainAcross.getMinutes()
-        ? tryAgainAcross.getMinutes() + " minutes"
-        : tryAgainAcross.getSeconds() + " seconds"
+      `You ran out of attempts try again across ${
+        tryAgainAcross.getMinutes()
+          ? tryAgainAcross.getMinutes() + " minutes"
+          : tryAgainAcross.getSeconds() + " seconds"
       } `
     );
   }

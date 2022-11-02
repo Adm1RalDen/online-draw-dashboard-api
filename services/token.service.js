@@ -1,15 +1,22 @@
 const jwt = require("jsonwebtoken");
-const { SECRETKEY, JWT_REFRESH_SECRET } = require("../const/settings");
+const {
+  SECRETKEY,
+  JWT_REFRESH_SECRET,
+  ACCESS_TOKEN_EXPIRES_IN,
+  REFRESH_TOKEN_EXPIRES_IN,
+} = require("../const/settings");
 const ApiError = require("../error/errorClass");
 const Token = require("../models/token");
 
 const generateToken = (id, email, role) => {
   const access = jwt.sign({ id, email, role }, SECRETKEY, {
-    expiresIn: "5m",
+    expiresIn: ACCESS_TOKEN_EXPIRES_IN,
   });
+
   const refresh = jwt.sign({ id, email, role }, JWT_REFRESH_SECRET, {
-    expiresIn: "6m",
+    expiresIn: REFRESH_TOKEN_EXPIRES_IN,
   });
+
   return { access, refresh };
 };
 
@@ -19,6 +26,7 @@ const saveToken = async (userId, refreshToken) => {
   if (exist) {
     exist.refreshToken = refreshToken;
     await exist.save();
+
     return;
   }
 
@@ -39,12 +47,6 @@ const refresh = async (refreshToken) => {
     throw ApiError.notAuthorized("User is not authorized");
   }
 
-  // const exist = await Token.findOne({ refreshToken });
-
-  // if (!exist) {
-  //   throw ApiError.notAuthorized("User is not authorized");
-  // }
-
   const token = generateToken(tokenData.id, tokenData.name, tokenData.role);
   await saveToken(tokenData.id, token.refresh);
 
@@ -57,6 +59,7 @@ const refresh = async (refreshToken) => {
       role: tokenData.role,
     },
   };
+
   return result;
 };
 
