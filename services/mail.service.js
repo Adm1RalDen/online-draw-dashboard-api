@@ -58,4 +58,24 @@ const sendActivationMail = async (email, link) => {
   });
 };
 
-module.exports = { sendActivationMail, send2FaCodeOnMail };
+const sendResetPasswordLinkOnMail = async (email, link) => {
+  const filePath = createPath(["..", "pages", "resetPasswordLink.html"]);
+  const buf = await readFile(filePath, { encoding: "utf-8" });
+
+  if (!buf) {
+    throw "Read error";
+  }
+
+  const htmlPage = buf.replace(/{LINK}/, link);
+
+  await transporter.sendMail({
+    from: SMTP_USER,
+    to: email,
+    subject: "Reset password",
+    text: "",
+    html: htmlPage,
+  });
+};
+
+
+module.exports = { sendActivationMail, send2FaCodeOnMail, sendResetPasswordLinkOnMail };

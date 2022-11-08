@@ -15,6 +15,8 @@ const {
     CONFIRM_CREATING_2FA,
     SEND_CODE_ON_MAIL,
     DISABLE_2FA,
+    RESET_PASSWORD,
+    RECOVER_PASSWORD
   },
 } = require("../const/endpoints");
 
@@ -26,6 +28,8 @@ router.get(ACTIVATION_LINK_URL, UserController.activate);
 router.post(REFRESH_URL, UserController.handleRefresh);
 router.post(LOGIN_URL, UserController.login);
 router.delete(LOGOUT_URL, UserController.logout);
+router.post(RESET_PASSWORD, UserController.resetPassword);
+router.post(RECOVER_PASSWORD, UserController.recoverPassword)
 
 router.get(SEND_CODE_ON_MAIL, authMiddleware, UserController.send2FaCodeOnEmail);
 router.post(CONFIRM_CREATING_2FA, authMiddleware, UserController.confirmCreating2Fa);

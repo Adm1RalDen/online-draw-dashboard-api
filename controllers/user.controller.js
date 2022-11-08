@@ -1,6 +1,7 @@
 const UserOperations = require("../db/user.operation");
 const tokenService = require("../services/token.service");
 const User = require("../models/user");
+const ResetPassword = require("../models/resetPassword");
 const Secret2FA = require("../models/user2FA");
 const qrcode = require("qrcode");
 
@@ -10,7 +11,9 @@ const TwoFA = require("../services/twoFa.service");
 
 const emailService = require("../services/mail.service");
 const { generateStrOfNumbers } = require("../utils/generateStrOfNumbers");
-
+const { ORIGIN } = require("../const/settings");
+const { nanoid } = require("nanoid");
+const secondsToMiliseconds = require("../utils/secondsToMiliseconds");
 
 const verify2FA = async (req, res, next) => {
   try {
@@ -156,7 +159,7 @@ const logout = async (req, res, next) => {
 const handleRefresh = async (req, res, next) => {
   try {
     const { refreshToken } = req.body;
-    
+
     if (!refreshToken) {
       return next(ApiError.notAuthorized("User is not authorized"));
     }
@@ -331,6 +334,91 @@ const create2Fa = async (req, res, next) => {
   }
 };
 
+const recoverPassword = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      throw ApiError.badRequest("Invalid data in request");
+    }
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      throw ApiError.forbidden("You are not authorized");
+    }
+
+    const linkId = nanoid();
+    const link = `${ORIGIN}/reset-password?link=${linkId}`;
+
+    const resetPassword = await ResetPassword.findOne({ userId: user.id });
+
+    if (resetPassword) {
+      if (Date.now() >= resetPassword.expiresAt) {
+        resetPassword.link = linkId;
+        resetPassword.createdAt = Date.now();
+        resetPassword.expiresAt = Date.now() + secondsToMiliseconds(600);
+        await resetPassword.save();
+      } else {
+        const timeDifference = new Date(resetPassword.expiresAt - Date.now());
+        const expiresAt =
+          timeDifference.getMinutes() > 0
+            ? timeDifference.getMinutes() + " minutes"
+            : timeDifference.getSeconds() + " seconds";
+
+        throw ApiError.forbidden(
+          `You can try to repeat reset password across ${expiresAt}`
+        );
+      }
+    } else {
+      await ResetPassword.create({
+        userId: user.id,
+        link: linkId,
+        createdAt: Date.now(),
+        expiresAt: Date.now() + secondsToMiliseconds(600),
+      });
+    }
+
+    await emailService.sendResetPasswordLinkOnMail(email, link);
+
+    return res.json();
+  } catch (e) {
+    next(e);
+  }
+};
+
+const resetPassword = async (req, res, next) => {
+  try {
+    const { password, confirmPassword, link } = req.body;
+
+    if (!password || !confirmPassword || !link) {
+      throw ApiError.badRequest("Invalid data in request");
+    }
+
+    if (password !== confirmPassword || password.length < 6) {
+      throw ApiError.badRequest("Invalid data in request");
+    }
+
+    const resetPassword = await ResetPassword.findOne({ link })
+
+    if (!resetPassword) {
+      throw ApiError.notFound("Link is not active")
+    }
+
+    if (Date.now() > resetPassword.createdAt + secondsToMiliseconds(1800)) {
+      throw ApiError.forbidden('Reset link is expired');
+    }
+
+    const hashPassword = Crypto.SHA256(password).toString();
+
+    await User.findByIdAndUpdate(resetPassword.userId, { password: hashPassword })
+
+    return res.json();
+  } catch (e) {
+    next(e);
+  }
+};
+
 module.exports = {
   registration,
   login,
@@ -344,4 +432,6 @@ module.exports = {
   confirmCreating2Fa,
   send2FaCodeOnEmail,
   disable2Fa,
+  resetPassword,
+  recoverPassword,
 };
