@@ -4,6 +4,7 @@ const User = require("../models/user");
 const ResetPassword = require("../models/resetPassword");
 const Secret2FA = require("../models/user2FA");
 const qrcode = require("qrcode");
+const RegistrationTokens = require("../models/registrationTokens");
 
 const ApiError = require("../error/errorClass");
 const Crypto = require("crypto-js");
@@ -15,6 +16,8 @@ const { ORIGIN } = require("../const/settings");
 const { nanoid } = require("nanoid");
 const secondsToMiliseconds = require("../utils/secondsToMiliseconds");
 const getUserGeolocation = require("../utils/getUserGeolocation");
+const createDir = require("../utils/createDir");
+const createPath = require("../utils/createPath");
 
 const verify2FA = async (req, res, next) => {
   try {
@@ -60,17 +63,31 @@ const verify2FA = async (req, res, next) => {
 const activate = async (req, res, next) => {
   try {
     const { link } = req.params;
-    if (!link) return next(ApiError.badRequest("Invalid link"));
-    const user = await User.findOne({ activationLink: link });
-    if (!user) {
-      return next(ApiError.badRequest("Occured error"));
+
+    if (!link) throw ApiError.badRequest("Invalid link");
+
+    const registrationToken = await RegistrationTokens.findOne({
+      activationLink: link,
+    });
+
+    if (!registrationToken) {
+      throw ApiError.badRequest("Occured error");
     }
-    if (user.isActivated) {
-      return next(ApiError.badRequest("Account is activated"));
+
+    if (new Date() > registrationToken.expiresAt) {
+      await registrationToken.delete();
+      throw ApiError.badRequest("Link isn`t active, try registration again");
     }
-    if (!user) return next(ApiError.notFound("Not found user with this link"));
-    user.isActivated = true;
-    await user.save();
+
+    const user = await User.create({
+      name: registrationToken.name,
+      email: registrationToken.email,
+      password: registrationToken.password,
+      isActivated: true,
+    });
+
+    await createDir(createPath(["..", "static", "users", user.id]));
+    await registrationToken.delete()
     return res.json({ message: "Success" });
   } catch (e) {
     next(e);
@@ -80,13 +97,25 @@ const activate = async (req, res, next) => {
 const registration = async (req, res, next) => {
   try {
     const { email, password, name } = req.body;
-    if (!email || !password || !name)
-      return next(ApiError.badRequest("Invalid data"));
+
+    if (!email || !password || !name) {
+      throw ApiError.badRequest("Invalid data");
+    }
 
     const userExist = await User.findOne({ email });
-    if (userExist) return next(ApiError.conflict("User is exist"));
+    const registrationToken = await RegistrationTokens.findOne({ email });
 
-    await UserOperations.RegisterUser({
+    if (userExist) {
+      throw ApiError.conflict("User is exist");
+    }
+
+    if (registrationToken) {
+      throw ApiError.badRequest(
+        "Letter was submit to your email, please confirm your account"
+      );
+    }
+
+    await UserOperations.RegisterToken({
       email,
       password,
       name,
@@ -97,7 +126,6 @@ const registration = async (req, res, next) => {
         "Letter was send in your email. Please confirm your email adress",
     });
   } catch (e) {
-    await User.findOneAndDelete({ email: req.body.email });
     next(e);
   }
 };
@@ -135,10 +163,12 @@ const login = async (req, res, next) => {
       },
     };
 
-    const userGeolocation = await getUserGeolocation(req.header('x-forwarded-for') || req.connection.remoteAddress)
-    
+    const userGeolocation = await getUserGeolocation(
+      req.header("x-forwarded-for") || req.connection.remoteAddress
+    );
+
     if (userGeolocation) {
-      await emailService.sendNotifyAboutLogin(email, userGeolocation)
+      await emailService.sendNotifyAboutLogin(email, userGeolocation);
     }
 
     return res.json(result);
@@ -406,19 +436,21 @@ const resetPassword = async (req, res, next) => {
       throw ApiError.badRequest("Invalid data in request");
     }
 
-    const resetPassword = await ResetPassword.findOne({ link })
+    const resetPassword = await ResetPassword.findOne({ link });
 
     if (!resetPassword) {
-      throw ApiError.notFound("Link is not active")
+      throw ApiError.notFound("Link is not active");
     }
 
     if (Date.now() > resetPassword.createdAt + secondsToMiliseconds(1800)) {
-      throw ApiError.forbidden('Reset link is expired');
+      throw ApiError.forbidden("Reset link is expired");
     }
 
     const hashPassword = Crypto.SHA256(password).toString();
 
-    await User.findByIdAndUpdate(resetPassword.userId, { password: hashPassword })
+    await User.findByIdAndUpdate(resetPassword.userId, {
+      password: hashPassword,
+    });
 
     return res.json();
   } catch (e) {

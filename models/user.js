@@ -26,8 +26,7 @@ const userSchema = new Schema({
     type: String,
     default: "/users/defaultUserFon.jpg",
   },
-  isActivated: { type: Boolean, default: false },
-  activationLink: { type: String },
+  isActivated: { type: Boolean, default: false }
 });
 
 module.exports = model("users", userSchema);

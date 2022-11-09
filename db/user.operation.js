@@ -4,11 +4,12 @@ const { nanoid } = require("nanoid");
 const { sendActivationMail } = require("../services/mail.service");
 const Token = require("../models/token");
 const path = require("path");
-const fs = require("fs");
 const ApiError = require("../error/errorClass");
+const RegistrationTokens = require("../models/registrationTokens");
 const { ORIGIN } = require("../const/settings");
 const { getTypeFromMime } = require("../utils/getTypeFromMime");
 const Secret2FA = require("../models/user2FA");
+const secondsToMiliseconds = require("../utils/secondsToMiliseconds");
 
 const CheckUser = async (email) => {
   const candidate = await User.findOne({ email });
@@ -16,32 +17,22 @@ const CheckUser = async (email) => {
   return candidate;
 };
 
-const createUser = async (data) => {
-  const user = await User.create(data);
-  return user;
-};
 
-const RegisterUser = async (data) => {
+const RegisterToken = async (data) => {
   const { email, password, name } = data;
   const hash_password = Crypto.SHA256(password).toString();
   const activationLink = nanoid();
 
-  const user = await createUser({
+  await RegistrationTokens.create({
+    name,
     email,
     password: hash_password,
-    name,
     activationLink,
-  });
-
-  fs.mkdir(path.resolve(__dirname, "..", "static", "users", user.id), (err) => {
-    if (err) {
-      throw err;
-    }
+    createdAt: Date.now(),
+    expiresAt: Date.now() + secondsToMiliseconds(1800),
   });
 
   await sendActivationMail(email, `${ORIGIN}/activate/${activationLink}`);
-
-  return user;
 };
 
 const LoginUser = async ({ email, password }) => {
@@ -173,7 +164,7 @@ const checkUser2FaAbility = async (id) => {
 
 module.exports = {
   CheckUser,
-  RegisterUser,
+  RegisterToken,
   LoginUser,
   GetUser,
   Logout,
