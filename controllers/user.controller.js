@@ -14,6 +14,7 @@ const { generateStrOfNumbers } = require("../utils/generateStrOfNumbers");
 const { ORIGIN } = require("../const/settings");
 const { nanoid } = require("nanoid");
 const secondsToMiliseconds = require("../utils/secondsToMiliseconds");
+const getUserGeolocation = require("../utils/getUserGeolocation");
 
 const verify2FA = async (req, res, next) => {
   try {
@@ -134,7 +135,13 @@ const login = async (req, res, next) => {
       },
     };
 
-    return res.status(200).json(result);
+    const userGeolocation = await getUserGeolocation(req.header('x-forwarded-for') || req.connection.remoteAddress)
+    
+    if (userGeolocation) {
+      await emailService.sendNotifyAboutLogin(email, userGeolocation)
+    }
+
+    return res.json(result);
   } catch (e) {
     next(e);
   }
