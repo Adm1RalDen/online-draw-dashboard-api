@@ -5,19 +5,20 @@ const ResetPassword = require("../models/resetPassword");
 const Secret2FA = require("../models/user2FA");
 const qrcode = require("qrcode");
 const RegistrationTokens = require("../models/registrationTokens");
+const emailService = require("../services/mail.service");
+const { ORIGIN } = require("../const/settings");
 
 const ApiError = require("../error/errorClass");
 const Crypto = require("crypto-js");
 const TwoFA = require("../services/twoFa.service");
 
-const emailService = require("../services/mail.service");
 const { generateStrOfNumbers } = require("../utils/generateStrOfNumbers");
-const { ORIGIN } = require("../const/settings");
 const { nanoid } = require("nanoid");
 const secondsToMiliseconds = require("../utils/secondsToMiliseconds");
 const getUserGeolocation = require("../utils/getUserGeolocation");
 const createDir = require("../utils/createDir");
 const createPath = require("../utils/createPath");
+const checkCaptcha = require("../utils/checkCaptcha");
 
 const verify2FA = async (req, res, next) => {
   try {
@@ -96,10 +97,16 @@ const activate = async (req, res, next) => {
 
 const registration = async (req, res, next) => {
   try {
-    const { email, password, name } = req.body;
+    const { email, password, name, captcha } = req.body;
 
-    if (!email || !password || !name) {
+    if (!email || !password || !name || !captcha) {
       throw ApiError.badRequest("Invalid data");
+    }
+
+    const isValidCaptcha = await checkCaptcha(captcha)
+
+    if (!isValidCaptcha) {
+      throw ApiError.forbidden('Invalid captcha')
     }
 
     const userExist = await User.findOne({ email });
@@ -132,10 +139,16 @@ const registration = async (req, res, next) => {
 
 const login = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, captcha } = req.body;
 
-    if (!email || !password) {
+    if (!email || !password || !captcha) {
       throw ApiError.badRequest("Invalid data");
+    }
+
+    const isValidCaptcha = await checkCaptcha(captcha)
+
+    if (!isValidCaptcha) {
+      throw ApiError.forbidden('Invalid captcha')
     }
 
     const user = await UserOperations.LoginUser({ email, password });

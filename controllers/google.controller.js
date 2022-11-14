@@ -22,7 +22,7 @@ const handleGoogleLogin = async (req, res) => {
           attemptsLeftCount: userSecret.attemptsLeftCount,
         })
       );
-  
+
       let base64data = buff.toString("base64");
       return res.redirect(`${GOOGLE_USE2FA_REDIRECT}?data=${base64data}`);
     }
@@ -41,8 +41,7 @@ const handleGoogleLogin = async (req, res) => {
     );
   } catch (e) {
     return res.redirect(
-      `${FAILURE_GOOGLE_REDIRECT}?error=${
-        typeof e === "string" ? e : e?.message || JSON.stringify(e)
+      `${FAILURE_GOOGLE_REDIRECT}?error=${typeof e === "string" ? e : e?.message || JSON.stringify(e)
       }`
     );
   }
