@@ -14,9 +14,9 @@ const userSchema = new Schema({
   rooms: { type: [String], default: [] },
   isUserInRoom: { type: Boolean, default: false },
   isUse2FA: { type: Boolean, default: false },
-  originalAvatar: { type: String, required: true },
-  avatar: { type: String, required: true },
-  backgroundFon: { type: String, required: true },
+  originalAvatar: { type: String },
+  avatar: { type: String },
+  backgroundFon: { type: String },
   isActivated: { type: Boolean, default: false },
 });
 
