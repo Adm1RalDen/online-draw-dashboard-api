@@ -22,7 +22,7 @@ const transporter = nodemailer.createTransport({
 });
 
 const send2FaCodeOnMail = async (email, code) => {
-  const filePath = createPath(["..", "pages", "twoFaCode.html"]);
+  const filePath = createPath(["pages", "twoFaCode.html"]);
   const buf = await readFile(filePath, { encoding: "utf-8" });
 
   if (!buf) {
@@ -41,7 +41,7 @@ const send2FaCodeOnMail = async (email, code) => {
 };
 
 const sendActivationMail = async (email, link) => {
-  const filePath = createPath(["..", "pages", "activationEmail.html"]);
+  const filePath = createPath(["pages", "activationEmail.html"]);
   const buf = await readFile(filePath, { encoding: "utf-8" });
 
   if (!buf) {
@@ -60,7 +60,7 @@ const sendActivationMail = async (email, link) => {
 };
 
 const sendResetPasswordLinkOnMail = async (email, link) => {
-  const filePath = createPath(["..", "pages", "resetPasswordLink.html"]);
+  const filePath = createPath(["pages", "resetPasswordLink.html"]);
   const buf = await readFile(filePath, { encoding: "utf-8" });
 
   if (!buf) {
@@ -82,7 +82,7 @@ const sendNotifyAboutLogin = async (
   email,
   { country_name, city, timezone }
 ) => {
-  const filePath = createPath(["..", "pages", "notifyUserAboutLogin.html"]);
+  const filePath = createPath(["pages", "notifyUserAboutLogin.html"]);
   const buf = await readFile(filePath, { encoding: "utf-8" });
 
   if (!buf) {

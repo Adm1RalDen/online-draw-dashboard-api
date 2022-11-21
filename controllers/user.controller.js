@@ -18,6 +18,7 @@ const secondsToMiliseconds = require("../utils/secondsToMiliseconds");
 const getUserGeolocation = require("../utils/getUserGeolocation");
 const createDir = require("../utils/createDir");
 const createPath = require("../utils/createPath");
+const copyFile = require("../utils/copyFile");
 
 const verify2FA = async (req, res, next) => {
   try {
@@ -86,8 +87,31 @@ const activate = async (req, res, next) => {
       isActivated: true,
     });
 
-    await createDir(createPath(["..", "static", "users", user.id]));
-    await registrationToken.delete()
+    user.avatar = `users/${user.id}/${user.id}_originalAvatar.png`;
+    user.originalAvatar = `users/${user.id}/${user.id}_avatar.png`;
+    user.backgroundFon = `users/${user.id}/${user.id}_background.jpg`;
+
+    const userDestination = ["static", "users"];
+  
+    await Promise.all([
+      createDir(createPath([...userDestination, user.id])),
+      copyFile(
+        createPath([...userDestination, "defaultUserFon.jpg"]),
+        createPath([...userDestination, user.id, `${user.id}_background.jpg`])
+      ),
+      copyFile(
+        createPath([...userDestination, "defaultUserImage.png"]),
+        createPath([...userDestination, user.id, `${user.id}_avatar.png`])
+      ),
+      copyFile(
+        createPath([...userDestination, "defaultUserImage.png"]),
+        createPath([...userDestination, user.id, `${user.id}_originalAvatar.png`])
+      )
+    ]);
+
+    await user.save();
+    await registrationToken.delete();
+
     return res.json({ message: "Success" });
   } catch (e) {
     next(e);
@@ -227,14 +251,11 @@ const updateUserData = async (req, res, next) => {
       throw ApiError.badRequest("Invalid data in request");
     }
 
-    try {
-      await User.findById(data.id);
-    } catch {
-      throw ApiError.notFound("User is not found");
-    }
+    const user = await User.findById(data.id);
 
-    await UserOperations.Update(data, files);
-    return res.json({ message: "Updated" });
+    const updatedUserProfile = await UserOperations.Update(data, files, user);
+
+    return res.json(updatedUserProfile);
   } catch (e) {
     next(e);
   }

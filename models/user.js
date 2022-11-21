@@ -14,19 +14,10 @@ const userSchema = new Schema({
   rooms: { type: [String], default: [] },
   isUserInRoom: { type: Boolean, default: false },
   isUse2FA: { type: Boolean, default: false },
-  originalAvatar: {
-    type: String,
-    default: "/users/defaultUserImage.png",
-  },
-  avatar: {
-    type: String,
-    default: "/users/defaultUserImage.png",
-  },
-  backgroundFon: {
-    type: String,
-    default: "/users/defaultUserFon.jpg",
-  },
-  isActivated: { type: Boolean, default: false }
+  originalAvatar: { type: String, required: true },
+  avatar: { type: String, required: true },
+  backgroundFon: { type: String, required: true },
+  isActivated: { type: Boolean, default: false },
 });
 
 module.exports = model("users", userSchema);
