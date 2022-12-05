@@ -1,10 +1,10 @@
 const UserOperations = require("../db/user.operation");
 const tokenService = require("../services/token.service");
 const User = require("../models/user");
-const ResetPassword = require("../models/resetPassword");
-const Secret2FA = require("../models/user2FA");
+const ResetPassword = require("../models/reset-password-data");
+const Secret2FA = require("../models/twofa-data");
 const qrcode = require("qrcode");
-const RegistrationTokens = require("../models/registrationTokens");
+const RegistrationTokens = require("../models/registration-data");
 const emailService = require("../services/mail.service");
 const { ORIGIN } = require("../const/settings");
 
