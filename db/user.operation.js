@@ -10,13 +10,14 @@ const { ORIGIN } = require("../const/settings");
 const { getTypeFromMime } = require("../utils/getTypeFromMime");
 const Secret2FA = require("../models/twofa-data");
 const secondsToMiliseconds = require("../utils/secondsToMiliseconds");
+const createPath = require("../utils/createPath");
+const fs = require('fs/promises')
 
 const CheckUser = async (email) => {
   const candidate = await User.findOne({ email });
   if (!candidate) throw ApiError.notFound("User is not exist");
   return candidate;
 };
-
 
 const RegisterToken = async (data) => {
   const { email, password, name } = data;
@@ -71,61 +72,66 @@ const Logout = async (refreshToken) => {
 
 const Update = async (
   { id, email, password, ...data },
-  { avatar, backgroundFon, originalAvatar }
+  { avatar, backgroundFon, originalAvatar },
+  user
 ) => {
   let resultObject = {};
 
   if (avatar) {
     const ext = getTypeFromMime(avatar.mimetype);
-    const avatarPath = `users/${id}/${id}_avatar.${ext}`;
-    await avatar.mv(
-      path.resolve(
-        __dirname,
-        "..",
-        "static",
-        "users",
-        id,
-        `${id}_avatar.${ext}`
-      )
-    );
-    resultObject = { ...resultObject, avatar: avatarPath };
-  }
+    const avatarFileName = `${nanoid()}_avatar.${ext}`;
 
-  if (backgroundFon) {
-    const ext = getTypeFromMime(backgroundFon.mimetype);
-    const backgroundPath = `users/${id}/${id}_background.${ext}`;
-    await backgroundFon.mv(
-      path.resolve(
-        __dirname,
-        "..",
-        "static",
-        "users",
-        id,
-        `${id}_background.${ext}`
-      )
-    );
-    resultObject = { ...resultObject, backgroundFon: backgroundPath };
+    await Promise.all([
+      fs.unlink(createPath(["static", user.avatar])),
+      fs.writeFile(
+        createPath(["static", "users", id, avatarFileName]),
+        avatar.data
+      ),
+    ]);
+
+    resultObject = { avatar: `users/${id}/${avatarFileName}` };
   }
 
   if (originalAvatar) {
     const ext = getTypeFromMime(originalAvatar.mimetype);
-    const originalAvatarPath = `users/${id}/${id}_originalAvatar.${ext}`;
-    await originalAvatar.mv(
-      path.resolve(
-        __dirname,
-        "..",
-        "static",
-        "users",
-        id,
-        `${id}_originalAvatar.${ext}`
-      )
-    );
-    resultObject = { ...resultObject, originalAvatar: originalAvatarPath };
+    const originalAvatarFileName = `${nanoid()}_originalAvatar.${ext}`;
+
+    await Promise.all([
+      fs.unlink(createPath(["static", user.originalAvatar])),
+      fs.writeFile(
+        createPath(["static", "users", id, originalAvatarFileName]),
+        originalAvatar.data
+      ),
+    ]);
+
+    resultObject = {
+      ...resultObject,
+      originalAvatar: `users/${id}/${originalAvatarFileName}`,
+    };
   }
 
-  resultObject = { ...resultObject, ...data };
+  if (backgroundFon) {
+    const ext = getTypeFromMime(backgroundFon.mimetype);
+    const backgroundFileName = `${nanoid()}_background.${ext}`;
 
-  const res = await User.findByIdAndUpdate(id, { ...resultObject });
+    await Promise.all([
+      fs.unlink(createPath(["static", user.backgroundFon])),
+      fs.writeFile(
+        createPath(["static", "users", id, backgroundFileName]),
+        backgroundFon.data
+      ),
+    ]);
+
+    resultObject = {
+      ...resultObject,
+      backgroundFon: `users/${id}/${backgroundFileName}`,
+    };
+  }
+
+  await User.findByIdAndUpdate(id, { ...resultObject, ...data });
+
+  const res = await GetUser(id);
+
   return res;
 };
 
@@ -151,10 +157,9 @@ const checkUser2FaAbility = async (id) => {
 
   if (!isExpiredTimeToNextAttempt || userSecret.attemptsLeftCount === 0) {
     throw ApiError.forbidden(
-      `You ran out of attempts try again across ${
-        tryAgainAcross.getMinutes()
-          ? tryAgainAcross.getMinutes() + " minutes"
-          : tryAgainAcross.getSeconds() + " seconds"
+      `You ran out of attempts try again across ${tryAgainAcross.getMinutes()
+        ? tryAgainAcross.getMinutes() + " minutes"
+        : tryAgainAcross.getSeconds() + " seconds"
       } `
     );
   }
