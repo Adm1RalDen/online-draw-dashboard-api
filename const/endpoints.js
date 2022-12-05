@@ -22,6 +22,8 @@ const CREATE_2FA = "/create-twoFa";
 const CONFIRM_CREATING_2FA = "/confirm-creating-2fa";
 const SEND_CODE_ON_MAIL = "/send-code-on-mail";
 const DISABLE_2FA = "/disable-2fa";
+const RESET_PASSWORD = "/reset-password"
+const RECOVER_PASSWORD = "/recover-password"
 
 const GOOGLE_SIGN_IN_ENDPOINT = "/google";
 const GOOGLE_SIGN_IN_CALLBACK_ENDPOINT = "/google/callback";
@@ -39,7 +41,9 @@ const USER_ENDPOINTS = {
   CREATE_2FA,
   CONFIRM_CREATING_2FA,
   SEND_CODE_ON_MAIL,
-  DISABLE_2FA
+  DISABLE_2FA,
+  RESET_PASSWORD,
+  RECOVER_PASSWORD
 };
 
 const ROOM_ENDPOINTS = {

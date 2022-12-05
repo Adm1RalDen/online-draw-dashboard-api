@@ -1,15 +1,25 @@
 const UserOperations = require("../db/user.operation");
 const tokenService = require("../services/token.service");
 const User = require("../models/user");
-const Secret2FA = require("../models/user2FA");
+const ResetPassword = require("../models/reset-password-data");
+const Secret2FA = require("../models/twofa-data");
 const qrcode = require("qrcode");
+const RegistrationTokens = require("../models/registration-data");
+const emailService = require("../services/mail.service");
+const { ORIGIN } = require("../const/settings");
 
 const ApiError = require("../error/errorClass");
 const Crypto = require("crypto-js");
 const TwoFA = require("../services/twoFa.service");
+const fs = require('fs/promises')
 
-const emailService = require("../services/mail.service");
 const { generateStrOfNumbers } = require("../utils/generateStrOfNumbers");
+const { nanoid } = require("nanoid");
+const secondsToMiliseconds = require("../utils/secondsToMiliseconds");
+const getUserGeolocation = require("../utils/getUserGeolocation");
+const createDir = require("../utils/createDir");
+const createPath = require("../utils/createPath");
+const checkCaptcha = require("../utils/checkCaptcha");
 
 
 const verify2FA = async (req, res, next) => {
@@ -56,17 +66,54 @@ const verify2FA = async (req, res, next) => {
 const activate = async (req, res, next) => {
   try {
     const { link } = req.params;
-    if (!link) return next(ApiError.badRequest("Invalid link"));
-    const user = await User.findOne({ activationLink: link });
-    if (!user) {
-      return next(ApiError.badRequest("Occured error"));
+
+    if (!link) throw ApiError.badRequest("Invalid link");
+
+    const registrationToken = await RegistrationTokens.findOne({
+      activationLink: link,
+    });
+
+    if (!registrationToken) {
+      throw ApiError.badRequest("Occured error");
     }
-    if (user.isActivated) {
-      return next(ApiError.badRequest("Account is activated"));
+
+    if (new Date() > registrationToken.expiresAt) {
+      await registrationToken.delete();
+      throw ApiError.badRequest("Link isn`t active, try registration again");
     }
-    if (!user) return next(ApiError.notFound("Not found user with this link"));
-    user.isActivated = true;
+
+    const user = await User.create({
+      name: registrationToken.name,
+      email: registrationToken.email,
+      password: registrationToken.password,
+      isActivated: true,
+    });
+
+    user.avatar = `users/${user.id}/${user.id}_originalAvatar.png`;
+    user.originalAvatar = `users/${user.id}/${user.id}_avatar.png`;
+    user.backgroundFon = `users/${user.id}/${user.id}_background.jpg`;
+
+    const userDestination = ["static", "users"];
+
+    await Promise.all([
+      createDir(createPath([...userDestination, user.id])),
+      fs.copyFile(
+        createPath([...userDestination, "defaultUserFon.jpg"]),
+        createPath([...userDestination, user.id, `${user.id}_background.jpg`])
+      ),
+      fs.copyFile(
+        createPath([...userDestination, "defaultUserImage.png"]),
+        createPath([...userDestination, user.id, `${user.id}_avatar.png`])
+      ),
+      fs.copyFile(
+        createPath([...userDestination, "defaultUserImage.png"]),
+        createPath([...userDestination, user.id, `${user.id}_originalAvatar.png`])
+      )
+    ]);
+
     await user.save();
+    await registrationToken.delete();
+
     return res.json({ message: "Success" });
   } catch (e) {
     next(e);
@@ -75,14 +122,32 @@ const activate = async (req, res, next) => {
 
 const registration = async (req, res, next) => {
   try {
-    const { email, password, name } = req.body;
-    if (!email || !password || !name)
-      return next(ApiError.badRequest("Invalid data"));
+    const { email, password, name, captcha } = req.body;
+
+    if (!email || !password || !name || !captcha) {
+      throw ApiError.badRequest("Invalid data");
+    }
+
+    const isValidCaptcha = await checkCaptcha(captcha)
+
+    if (!isValidCaptcha) {
+      throw ApiError.forbidden('Invalid captcha')
+    }
 
     const userExist = await User.findOne({ email });
-    if (userExist) return next(ApiError.conflict("User is exist"));
+    const registrationToken = await RegistrationTokens.findOne({ email });
 
-    await UserOperations.RegisterUser({
+    if (userExist) {
+      throw ApiError.conflict("User is exist");
+    }
+
+    if (registrationToken) {
+      throw ApiError.badRequest(
+        "Letter was submit to your email, please confirm your account"
+      );
+    }
+
+    await UserOperations.RegisterToken({
       email,
       password,
       name,
@@ -93,17 +158,22 @@ const registration = async (req, res, next) => {
         "Letter was send in your email. Please confirm your email adress",
     });
   } catch (e) {
-    await User.findOneAndDelete({ email: req.body.email });
     next(e);
   }
 };
 
 const login = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, captcha } = req.body;
 
-    if (!email || !password) {
+    if (!email || !password || !captcha) {
       throw ApiError.badRequest("Invalid data");
+    }
+
+    const isValidCaptcha = await checkCaptcha(captcha)
+
+    if (!isValidCaptcha) {
+      throw ApiError.forbidden('Invalid captcha')
     }
 
     const user = await UserOperations.LoginUser({ email, password });
@@ -131,7 +201,15 @@ const login = async (req, res, next) => {
       },
     };
 
-    return res.status(200).json(result);
+    const userGeolocation = await getUserGeolocation(
+      req.header("x-forwarded-for") || req.connection.remoteAddress
+    );
+
+    if (userGeolocation) {
+      await emailService.sendNotifyAboutLogin(email, userGeolocation);
+    }
+
+    return res.json(result);
   } catch (e) {
     next(e);
   }
@@ -156,7 +234,7 @@ const logout = async (req, res, next) => {
 const handleRefresh = async (req, res, next) => {
   try {
     const { refreshToken } = req.body;
-    
+
     if (!refreshToken) {
       return next(ApiError.notAuthorized("User is not authorized"));
     }
@@ -187,14 +265,11 @@ const updateUserData = async (req, res, next) => {
       throw ApiError.badRequest("Invalid data in request");
     }
 
-    try {
-      await User.findById(data.id);
-    } catch {
-      throw ApiError.notFound("User is not found");
-    }
+    const user = await User.findById(data.id);
 
-    await UserOperations.Update(data, files);
-    return res.json({ message: "Updated" });
+    const updatedUserProfile = await UserOperations.Update(data, files, user);
+
+    return res.json(updatedUserProfile);
   } catch (e) {
     next(e);
   }
@@ -331,6 +406,93 @@ const create2Fa = async (req, res, next) => {
   }
 };
 
+const recoverPassword = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      throw ApiError.badRequest("Invalid data in request");
+    }
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      throw ApiError.forbidden("You are not authorized");
+    }
+
+    const linkId = nanoid();
+    const link = `${ORIGIN}/reset-password?link=${linkId}`;
+
+    const resetPassword = await ResetPassword.findOne({ userId: user.id });
+
+    if (resetPassword) {
+      if (Date.now() >= resetPassword.expiresAt) {
+        resetPassword.link = linkId;
+        resetPassword.createdAt = Date.now();
+        resetPassword.expiresAt = Date.now() + secondsToMiliseconds(600);
+        await resetPassword.save();
+      } else {
+        const timeDifference = new Date(resetPassword.expiresAt - Date.now());
+        const expiresAt =
+          timeDifference.getMinutes() > 0
+            ? timeDifference.getMinutes() + " minutes"
+            : timeDifference.getSeconds() + " seconds";
+
+        throw ApiError.forbidden(
+          `You can try to repeat reset password across ${expiresAt}`
+        );
+      }
+    } else {
+      await ResetPassword.create({
+        userId: user.id,
+        link: linkId,
+        createdAt: Date.now(),
+        expiresAt: Date.now() + secondsToMiliseconds(600),
+      });
+    }
+
+    await emailService.sendResetPasswordLinkOnMail(email, link);
+
+    return res.json();
+  } catch (e) {
+    next(e);
+  }
+};
+
+const resetPassword = async (req, res, next) => {
+  try {
+    const { password, confirmPassword, link } = req.body;
+
+    if (!password || !confirmPassword || !link) {
+      throw ApiError.badRequest("Invalid data in request");
+    }
+
+    if (password !== confirmPassword || password.length < 6) {
+      throw ApiError.badRequest("Invalid data in request");
+    }
+
+    const resetPassword = await ResetPassword.findOne({ link });
+
+    if (!resetPassword) {
+      throw ApiError.notFound("Link is not active");
+    }
+
+    if (Date.now() > resetPassword.createdAt + secondsToMiliseconds(1800)) {
+      throw ApiError.forbidden("Reset link is expired");
+    }
+
+    const hashPassword = Crypto.SHA256(password).toString();
+
+    await User.findByIdAndUpdate(resetPassword.userId, {
+      password: hashPassword,
+    });
+
+    return res.json();
+  } catch (e) {
+    next(e);
+  }
+};
+
 module.exports = {
   registration,
   login,
@@ -344,4 +506,6 @@ module.exports = {
   confirmCreating2Fa,
   send2FaCodeOnEmail,
   disable2Fa,
+  resetPassword,
+  recoverPassword,
 };
