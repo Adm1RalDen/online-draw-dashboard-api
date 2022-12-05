@@ -9,4 +9,4 @@ const schema = new Schema({
   activationLink: { type: String, required: true }
 })
 
-module.exports = model("registration-tokens", schema);
+module.exports = model("registration-data", schema);

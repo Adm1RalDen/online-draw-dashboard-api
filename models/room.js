@@ -1,14 +1,14 @@
 const { Schema, model } = require("mongoose");
 
-const Room = Schema({
-  roomName: { type: String, required: true },
-  roomPassword: { type: String, default: "" },
-  users: { type: [Object], default: [] },
-  status: { type: Boolean, default: true },
-  owner: { type: String, required: true },
-  isShow: { type: Boolean, default: true },
+const schema = new Schema({
   limit: { type: Number, default: 5 },
-  roomImages: { type: [String], default: [] }
+  users: { type: [Object], default: [] },
+  owner: { type: String, required: true },
+  status: { type: Boolean, default: true },
+  isShow: { type: Boolean, default: true },
+  roomName: { type: String, required: true },
+  roomImages: { type: [String], default: [] },
+  roomPassword: { type: String, default: "" }
 })
 
-module.exports = model("rooms", Room);
+module.exports = model("rooms", schema);

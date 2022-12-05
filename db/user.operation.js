@@ -5,10 +5,10 @@ const { sendActivationMail } = require("../services/mail.service");
 const Token = require("../models/token");
 const path = require("path");
 const ApiError = require("../error/errorClass");
-const RegistrationTokens = require("../models/registrationTokens");
+const RegistrationTokens = require("../models/registration-data");
 const { ORIGIN } = require("../const/settings");
 const { getTypeFromMime } = require("../utils/getTypeFromMime");
-const Secret2FA = require("../models/user2FA");
+const Secret2FA = require("../models/twofa-data");
 const secondsToMiliseconds = require("../utils/secondsToMiliseconds");
 
 const CheckUser = async (email) => {

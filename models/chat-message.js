@@ -1,9 +1,9 @@
 const { Schema, model } = require("mongoose");
 
-const messageSchema = new Schema({
+const schema = new Schema({
   name: { type: String, required: true },
-  message: { type: String, required: true },
   userId: { type: String, required: true },
+  message: { type: String, required: true },
 })
 
-module.exports = model("chats", messageSchema);
+module.exports = model("chat-messages", schema);
