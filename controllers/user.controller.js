@@ -9,6 +9,7 @@ const RegistrationTokens = require("../models/registrationTokens");
 const ApiError = require("../error/errorClass");
 const Crypto = require("crypto-js");
 const TwoFA = require("../services/twoFa.service");
+const fs = require('fs/promises')
 
 const emailService = require("../services/mail.service");
 const { generateStrOfNumbers } = require("../utils/generateStrOfNumbers");
@@ -18,7 +19,7 @@ const secondsToMiliseconds = require("../utils/secondsToMiliseconds");
 const getUserGeolocation = require("../utils/getUserGeolocation");
 const createDir = require("../utils/createDir");
 const createPath = require("../utils/createPath");
-const copyFile = require("../utils/copyFile");
+
 
 const verify2FA = async (req, res, next) => {
   try {
@@ -92,18 +93,18 @@ const activate = async (req, res, next) => {
     user.backgroundFon = `users/${user.id}/${user.id}_background.jpg`;
 
     const userDestination = ["static", "users"];
-  
+
     await Promise.all([
       createDir(createPath([...userDestination, user.id])),
-      copyFile(
+      fs.copyFile(
         createPath([...userDestination, "defaultUserFon.jpg"]),
         createPath([...userDestination, user.id, `${user.id}_background.jpg`])
       ),
-      copyFile(
+      fs.copyFile(
         createPath([...userDestination, "defaultUserImage.png"]),
         createPath([...userDestination, user.id, `${user.id}_avatar.png`])
       ),
-      copyFile(
+      fs.copyFile(
         createPath([...userDestination, "defaultUserImage.png"]),
         createPath([...userDestination, user.id, `${user.id}_originalAvatar.png`])
       )

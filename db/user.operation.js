@@ -10,9 +10,8 @@ const { ORIGIN } = require("../const/settings");
 const { getTypeFromMime } = require("../utils/getTypeFromMime");
 const Secret2FA = require("../models/user2FA");
 const secondsToMiliseconds = require("../utils/secondsToMiliseconds");
-const deleteFile = require("../utils/deleteFile");
 const createPath = require("../utils/createPath");
-const createFile = require("../utils/createFile");
+const fs = require('fs/promises')
 
 const CheckUser = async (email) => {
   const candidate = await User.findOne({ email });
@@ -83,8 +82,8 @@ const Update = async (
     const avatarFileName = `${nanoid()}_avatar.${ext}`;
 
     await Promise.all([
-      deleteFile(createPath(["static", user.avatar])),
-      createFile(
+      fs.unlink(createPath(["static", user.avatar])),
+      fs.writeFile(
         createPath(["static", "users", id, avatarFileName]),
         avatar.data
       ),
@@ -98,8 +97,8 @@ const Update = async (
     const originalAvatarFileName = `${nanoid()}_originalAvatar.${ext}`;
 
     await Promise.all([
-      deleteFile(createPath(["static", user.originalAvatar])),
-      createFile(
+      fs.unlink(createPath(["static", user.originalAvatar])),
+      fs.writeFile(
         createPath(["static", "users", id, originalAvatarFileName]),
         originalAvatar.data
       ),
@@ -116,8 +115,8 @@ const Update = async (
     const backgroundFileName = `${nanoid()}_background.${ext}`;
 
     await Promise.all([
-      deleteFile(createPath(["static", user.backgroundFon])),
-      createFile(
+      fs.unlink(createPath(["static", user.backgroundFon])),
+      fs.writeFile(
         createPath(["static", "users", id, backgroundFileName]),
         backgroundFon.data
       ),
@@ -158,10 +157,9 @@ const checkUser2FaAbility = async (id) => {
 
   if (!isExpiredTimeToNextAttempt || userSecret.attemptsLeftCount === 0) {
     throw ApiError.forbidden(
-      `You ran out of attempts try again across ${
-        tryAgainAcross.getMinutes()
-          ? tryAgainAcross.getMinutes() + " minutes"
-          : tryAgainAcross.getSeconds() + " seconds"
+      `You ran out of attempts try again across ${tryAgainAcross.getMinutes()
+        ? tryAgainAcross.getMinutes() + " minutes"
+        : tryAgainAcross.getSeconds() + " seconds"
       } `
     );
   }
