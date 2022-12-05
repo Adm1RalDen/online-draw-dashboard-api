@@ -1,4 +1,4 @@
-const chatMessage = require("../models/chatMessage");
+const chatMessage = require("../models/chat-message");
 const { CHAT: { GET_CHAT, CHAT_MESSAGE, CHAT_ERROR } } = require("../const/sockets");
 
 const onGetChat = async (socket) => {

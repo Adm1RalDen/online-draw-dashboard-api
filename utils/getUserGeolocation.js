@@ -10,14 +10,14 @@ const getUserGeolocation = async (ip) => {
     };
 
     const res = await new Promise((res) => {
-      https.get(options, function (resp) {
+      https.get(options, (resp) => {
         let body = "";
 
-        resp.on("data", function (data) {
+        resp.on("data", (data) => {
           body += data;
         });
 
-        resp.on("end", function () {
+        resp.on("end", () => {
           let location = JSON.parse(body);
           res(location);
         });
