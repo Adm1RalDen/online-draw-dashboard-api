@@ -11,6 +11,7 @@ const {
     UPDATE_USER_ROOM_SUCCESS,
   },
   ROOM: { GET_ROOMS },
+  DRAW: { CASE_EXIT }
 } = require("../const/sockets");
 const user = require("../models/user");
 
@@ -26,7 +27,7 @@ const onGetUserRooms = async ({ userId = "" }, socket) => {
   }
 };
 
-const onDeleteUserRoom = async (data, socket, io) => {
+const onDeleteUserRoom = async (data, socket, io, users) => {
   try {
     const { userId, roomId, roomPassword = "" } = data;
     let room;
@@ -55,20 +56,30 @@ const onDeleteUserRoom = async (data, socket, io) => {
     }
 
     currentUser.rooms = currentUser.rooms.filter((room) => room !== roomId);
+
     if (room.users.find((u) => u.userId === userId)) {
       currentUser.isUserInRoom = false;
     }
+
     await currentUser.save();
     await room.delete();
+
+    io.in(roomId).emit(CASE_EXIT);
+    socket.leave(roomId);
 
     const rooms = await Room.find().select("-__v");
 
     io.emit(GET_ROOMS, rooms.map(({ roomPassword, ...data }) => data)
       .filter((data) => data.status === true && data.isShow === true)
     );
-    socket.emit(DELETE_USER_ROOM_SUCCESS);
-    socket.emit(GET_USER_ROOMS, rooms.filter((data) => data.owner === userId));
 
+    const userSockets = users.get(userId)
+    const userRooms = rooms.filter((data) => data.owner === userId)
+
+    userSockets.forEach(s => {
+      s.emit(DELETE_USER_ROOM_SUCCESS)
+      s.emit(GET_USER_ROOMS, userRooms);
+    })
   } catch (e) {
     if (typeof e === "string") {
       socket.emit(DELETE_USER_ROOM_ERROR, e);
@@ -78,7 +89,7 @@ const onDeleteUserRoom = async (data, socket, io) => {
   }
 };
 
-const onUpdateUserRoom = async (data, socket, io) => {
+const onUpdateUserRoom = async (data, socket, io, users) => {
   try {
     const { userId, roomId, ...newdata } = data;
     let room;
@@ -105,8 +116,14 @@ const onUpdateUserRoom = async (data, socket, io) => {
       .filter((data) => data.status === true && data.isShow === true)
     );
 
-    socket.emit(UPDATE_USER_ROOM_SUCCESS);
-    socket.emit(GET_USER_ROOMS, rooms.filter((data) => data.owner === userId));
+    const userSockets = users.get(userId)
+    const userRooms = rooms.filter((data) => data.owner === userId)
+
+    userSockets.forEach((s) => {
+      s.emit(UPDATE_USER_ROOM_SUCCESS);
+      s.emit(GET_USER_ROOMS, userRooms);
+    })
+
   } catch (e) {
     if (typeof e === "string") {
       socket.emit(UPDATE_USER_ROOM_ERROR, e);

@@ -27,22 +27,29 @@ const onGetRooms = async (socket) => {
     const rooms = await getRooms();
     socket.emit(GET_ROOMS, rooms);
   } catch (e) {
-    socket.emit("ERROR", e.message || "Ocurred error");
+    socket.emit("ERROR", e?.message || "Ocurred error");
   }
 };
 
-const onCreateRoom = async (socket, data, io) => {
+const onCreateRoom = async (socket, data, io, users) => {
   try {
     const user = await User.findById(data.userId);
 
     if (!user.isUserInRoom) {
       const room = await CreateRoomDB(data);
       const rooms = await getRooms();
+
       user.isUserInRoom = true;
       user.save();
-      socket.join(room.id);
+
       io.emit(GET_ROOMS, [...rooms]);
-      socket.emit(CREATE_SUCCESS, room.id);
+
+      const userSockets = users.get(data.userId);
+
+      userSockets.forEach((s) => {
+        s.join(room.id);
+        s.emit(CREATE_SUCCESS, room.id);
+      });
     } else {
       throw "You are already in room (For create room you should left prev room)";
     }
@@ -55,7 +62,7 @@ const onCreateRoom = async (socket, data, io) => {
   }
 };
 
-const onJoin = async (socket, data, io) => {
+const onJoin = async (socket, data, io, users) => {
   try {
     const { roomId, roomPassword, userId, userName } = data;
     const user = await User.findById(userId);
@@ -103,8 +110,13 @@ const onJoin = async (socket, data, io) => {
 
     user.isUserInRoom = true;
     await user.save();
-    socket.join(roomId);
-    socket.emit(JOIN_ROOM_SUCCESS, roomId);
+
+    const userSockets = users.get(userId);
+
+    userSockets.forEach((s) => {
+      s.join(roomId);
+      s.emit(JOIN_ROOM_SUCCESS, roomId);
+    });
   } catch (e) {
     if (typeof e === "string") {
       socket.emit(JOIN_ROOM_ERROR, e);
@@ -117,41 +129,47 @@ const onJoin = async (socket, data, io) => {
 const onJoinAccess = async (socket, data) => {
   const { roomId } = data;
   socket.join(roomId);
-}
+};
 
-const onExit = async (socket, data, io) => {
+const onExit = async ({ roomId, userId }, socket, io, users) => {
   try {
-    const { roomId, userId } = data;
     const user = await User.findById(userId);
     const currentRoom = await Room.findById(roomId).select(
       "-roomPassword -__v"
     );
 
-    if (!currentRoom) throw "Error";
+    if (!currentRoom) throw "Server error";
+
+    const userSockets = users.get(userId);
 
     if (currentRoom.owner === userId) {
       currentRoom.users = [];
       currentRoom.status = false;
+
       io.in(roomId).emit(CASE_EXIT);
-      socket.leave(roomId);
-      await currentRoom.save();
+
+      userSockets.forEach((s) => s.leave(roomId))
+
     } else {
       currentRoom.users = currentRoom.users.filter(
         (user) => user.userId !== userId
       );
-      await currentRoom.save();
-      socket.leave(roomId);
-      socket.emit(CASE_EXIT);
+
+      userSockets.forEach((s) => s.leave(roomId))
+      userSockets.forEach((s) => s.emit(CASE_EXIT))
+
       socket.in(roomId).emit(GET_ROOM, currentRoom);
     }
 
+    await currentRoom.save();
+
     const rooms = await getRooms();
     user.isUserInRoom = false;
-    await user.save();
-    io.emit(GET_ROOMS, rooms);
-  } catch (e) {
 
-  }
+    await user.save();
+  
+    io.emit(GET_ROOMS, rooms);
+  } catch (e) {}
 };
 
 module.exports = { onGetRooms, onCreateRoom, onJoin, onExit, onJoinAccess };
