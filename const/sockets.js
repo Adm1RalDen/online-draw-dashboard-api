@@ -1,6 +1,7 @@
 const CONNECTION = "connection";
 const DISCONNECT = "disconnect";
 const GET_CHAT = "GET_CHAT";
+const GET_UPDATED_CHAT = 'GET_UPDATED_CHAT'
 const CHAT_ERROR = "CHAT_ERROR";
 const CHAT_MESSAGE = "CHAT_MESSAGE";
 const JOIN_ACCESS = "JOIN_ACCESS";
@@ -35,7 +36,8 @@ const SET_SNAPSHOT = "SET_SNAPSHOT";
 const CHAT = {
   GET_CHAT,
   CHAT_MESSAGE,
-  CHAT_ERROR
+  CHAT_ERROR,
+  GET_UPDATED_CHAT
 }
 const ROOM = {
   GET_ROOMS,
